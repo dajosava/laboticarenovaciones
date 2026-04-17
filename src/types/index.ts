@@ -79,6 +79,8 @@ export interface Renovacion {
   fecha: string
   notas: string | null
   creada_en: string
+  hubo_regalia?: boolean
+  unidades_regalia?: number | null
   tratamiento?: Tratamiento
   farmacia?: Farmacia
   empleado?: Empleado

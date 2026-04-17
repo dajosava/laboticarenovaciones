@@ -27,7 +27,6 @@ import {
 import BotonContactadoRenovacion from '@/app/(app)/dashboard/BotonContactadoRenovacion'
 import BotonEliminarPaciente from './BotonEliminarPaciente'
 import NotasPacienteEditable from './NotasPacienteEditable'
-import PacienteFloatingBar from './PacienteFloatingBar'
 
 type EstadoPaciente = 'critico' | 'seguimiento' | 'estable' | 'sin_activos'
 
@@ -154,9 +153,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
   const hrefRenovarUrgente = peorTratamiento ? `/pacientes/${id}/tratamiento/${peorTratamiento.id}/renovar` : null
 
   return (
-    <div className="relative mx-auto max-w-7xl px-4 pb-28 pt-6 md:px-6 lg:px-8">
-      <PacienteFloatingBar hrefRenovarUrgente={hrefRenovarUrgente} />
-
+    <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-6 lg:px-8">
       {/* HEADER — control center */}
       <header className="mb-6 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -427,6 +424,11 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                         {r.farmacia?.nombre ?? 'Sucursal'} · {r.empleado?.nombre ?? '—'}
                         {t ? ` · ${formatoMedicamento(t)}` : ''}
                       </p>
+                      {r.hubo_regalia && r.unidades_regalia ? (
+                        <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-400">
+                          Regalía: +{r.unidades_regalia} unidad{r.unidades_regalia !== 1 ? 'es' : ''}
+                        </p>
+                      ) : null}
                       {r.notas ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}
                     </li>
                   )

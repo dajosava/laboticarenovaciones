@@ -48,6 +48,9 @@ export type DatosRenovacion = {
   marca?: string | null
   concentracion?: string | null
   tipo?: 'cronico' | 'temporal'
+  /** Unidades extra por regalía/promo; se suman solo para calcular la nueva fecha de vencimiento. */
+  hubo_regalia?: boolean
+  unidades_regalia?: number | null
 }
 
 export async function registrarRenovacion(
@@ -60,6 +63,13 @@ export async function registrarRenovacion(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (datos.hubo_regalia) {
+    const u = datos.unidades_regalia
+    if (u == null || !Number.isFinite(u) || u < 1) {
+      return { error: 'Indica cuántas unidades de regalía (número entero mayor a 0).' }
+    }
+  }
+
   const [empleadoRes, pacienteRes] = await Promise.all([
     supabase.from('empleados').select('farmacia_id').eq('id', user.id).single(),
     supabase.from('pacientes').select('farmacia_id').eq('id', pacienteId).single(),
@@ -68,9 +78,15 @@ export async function registrarRenovacion(
   let farmaciaId = empleadoRes.data?.farmacia_id ?? pacienteRes.data?.farmacia_id ?? undefined
   if (!farmaciaId) return { error: 'No se pudo determinar la farmacia para la renovación' }
 
+  const extraRegalia =
+    datos.hubo_regalia && datos.unidades_regalia != null && datos.unidades_regalia > 0
+      ? Math.floor(datos.unidades_regalia)
+      : 0
+  const unidadesParaVencimiento = datos.unidades_caja + extraRegalia
+
   const fechaVencimiento = calcularFechaVencimiento(
     datos.fecha_surtido,
-    datos.unidades_caja,
+    unidadesParaVencimiento,
     datos.dosis_diaria
   )
 
@@ -86,6 +102,8 @@ export async function registrarRenovacion(
   if (datos.concentracion !== undefined) updatePayload.concentracion = datos.concentracion?.trim() || null
   if (datos.tipo !== undefined) updatePayload.tipo = datos.tipo
 
+  const huboRegalia = extraRegalia > 0
+
   const [errUpdate, errRenovacion] = await Promise.all([
     supabase.from('tratamientos').update(updatePayload).eq('id', tratamientoId).then((r: { error: { message: string } | null }) => r.error),
     supabase
@@ -96,6 +114,8 @@ export async function registrarRenovacion(
         empleado_id: user.id,
         fecha: datos.fecha_surtido,
         notas: datos.notas?.trim() || null,
+        hubo_regalia: huboRegalia,
+        unidades_regalia: huboRegalia ? extraRegalia : null,
       })
       .then((r: { error: { message: string } | null }) => r.error),
   ])
