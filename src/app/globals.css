@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #f9fafb;
+  color: #111827;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Dark Mode: overrides globales ──────────── */
+
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Cards y contenedores blancos */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+/* Fondos grises claros */
+html.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+
+/* Bordes */
+html.dark .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-gray-300 {
+  border-color: #475569 !important;
+}
+
+/* Textos */
+html.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+/* Inputs y selects */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #22c55e;
+}
+
+/* Tables */
+html.dark thead {
+  background-color: #1e293b !important;
+}
+
+html.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}
+
+html.dark tr:hover {
+  background-color: #334155 !important;
+}
+
+/* Cards de colores (alertas) — se oscurecen ligeramente */
+html.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1) !important; }
+html.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1) !important; }
+html.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.1) !important; }
+html.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.1) !important; }
+html.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+html.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.1) !important; }
+html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
+
+html.dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.15) !important; }
+html.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.15) !important; }
+html.dark .bg-orange-100 { background-color: rgba(249, 115, 22, 0.15) !important; }
+html.dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.15) !important; }
+
+html.dark .border-red-200 { border-color: rgba(239, 68, 68, 0.3) !important; }
+html.dark .border-orange-200 { border-color: rgba(249, 115, 22, 0.3) !important; }
+html.dark .border-yellow-200 { border-color: rgba(234, 179, 8, 0.3) !important; }
+html.dark .border-green-200 { border-color: rgba(34, 197, 94, 0.3) !important; }
+html.dark .border-blue-200 { border-color: rgba(59, 130, 246, 0.3) !important; }
+
+/* Scrollbar */
+html.dark ::-webkit-scrollbar { width: 8px; }
+html.dark ::-webkit-scrollbar-track { background: #1e293b; }
+html.dark ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
