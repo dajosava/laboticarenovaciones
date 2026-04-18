@@ -291,9 +291,9 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
           />
         </div>
         <div className="flex justify-between px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-5">
-          <span className={global.estado === 'critico' ? 'text-red-600 dark:text-red-400' : ''}>Crítico</span>
-          <span className={global.estado === 'seguimiento' ? 'text-amber-700 dark:text-amber-400' : ''}>Seguimiento</span>
           <span className={global.estado === 'estable' ? 'text-emerald-700 dark:text-emerald-400' : ''}>Estable</span>
+          <span className={global.estado === 'seguimiento' ? 'text-amber-700 dark:text-amber-400' : ''}>Seguimiento</span>
+          <span className={global.estado === 'critico' ? 'text-red-600 dark:text-red-400' : ''}>Crítico</span>
         </div>
       </div>
 
@@ -354,7 +354,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                       </div>
 
                       <p className="mt-2 text-sm">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">Riesgo renovación:</span>{' '}
+                        <span className="font-medium text-slate-500 dark:text-slate-400">Necesidad de renovación:</span>{' '}
                         <span className={`font-bold ${riesgo.className}`}>{riesgo.label}</span>
                         {dias < 0 ? <span className="text-slate-500"> — sin renovación registrada tras vencimiento</span> : null}
                       </p>

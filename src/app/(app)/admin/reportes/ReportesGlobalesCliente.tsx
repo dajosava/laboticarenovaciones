@@ -349,8 +349,8 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
 
   return (
     <>
-      <div className="sticky top-0 z-30 mb-4 space-y-3 border-b border-slate-200/90 bg-slate-50/95 pb-3 pt-1 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200/80 bg-white/90 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="sticky top-0 z-30 mb-4 space-y-3 rounded-2xl border border-slate-200/90 bg-slate-50/95 p-3 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 dark:shadow-lg dark:shadow-black/20 md:p-4">
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/90 bg-white/90 p-4 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/70 dark:shadow-md dark:shadow-black/10">
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Desde
             <input
@@ -358,7 +358,7 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
               value={desde}
               max={hasta}
               onChange={(e) => setDesde(e.target.value)}
-              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
             />
           </label>
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -368,7 +368,7 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
               value={hasta}
               min={desde}
               onChange={(e) => setHasta(e.target.value)}
-              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
             />
           </label>
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -376,7 +376,7 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
             <select
               value={farmaciaId}
               onChange={(e) => setFarmaciaId(e.target.value)}
-              className="min-w-[10rem] rounded-lg border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              className="min-w-[10rem] rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="">Todas</option>
               {farmacias
@@ -393,7 +393,7 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
             <select
               value={aseguradora}
               onChange={(e) => setAseguradora(e.target.value)}
-              className="min-w-[10rem] rounded-lg border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              className="min-w-[10rem] rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="">Todas</option>
               {opcionesAseguradora.map((a) => (

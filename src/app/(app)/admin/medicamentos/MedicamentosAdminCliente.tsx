@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { actualizarMedicamento, crearMedicamento } from './actions'
 
@@ -34,6 +35,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
 
   const [altaCodigo, setAltaCodigo] = useState('')
   const [altaDescripcion, setAltaDescripcion] = useState('')
+  const [altaPanelAbierto, setAltaPanelAbierto] = useState(true)
 
   const [modalEditar, setModalEditar] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -140,62 +142,83 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
   return (
     <div className="space-y-8">
       <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 md:p-6">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          Agregar medicamento
-        </h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Mismo formato que inventario: <strong>Número de artículo</strong> (opcional, ej. MED-00004) y{' '}
-          <strong>Descripción del artículo</strong> (obligatoria).
-        </p>
-        <form onSubmit={(e) => void registrarAlta(e)} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="alta-codigo" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              Número de artículo
-            </label>
-            <input
-              id="alta-codigo"
-              type="text"
-              value={altaCodigo}
-              onChange={(e) => setAltaCodigo(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="Ej: MED-00004"
-              autoComplete="off"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="alta-descripcion" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              Descripción del artículo *
-            </label>
-            <textarea
-              id="alta-descripcion"
-              value={altaDescripcion}
-              onChange={(e) => setAltaDescripcion(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="Texto completo como en inventario / receta"
-            />
-          </div>
-          <div className="sm:col-span-2 flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={guardando || !altaDescripcion.trim()}
-              className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {guardando ? 'Guardando…' : 'Registrar medicamento'}
-            </button>
-            <button
-              type="button"
-              disabled={guardando}
-              onClick={() => {
-                setAltaCodigo('')
-                setAltaDescripcion('')
-              }}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Limpiar campos
-            </button>
-          </div>
-        </form>
+        <button
+          type="button"
+          id="toggle-alta-medicamento"
+          onClick={() => setAltaPanelAbierto((v) => !v)}
+          aria-expanded={altaPanelAbierto}
+          aria-controls="panel-alta-medicamento"
+          className="group flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-200 ease-out hover:border-slate-200 hover:bg-slate-100/90 hover:shadow-md active:scale-[0.995] dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:shadow-lg dark:hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
+        >
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-hover:text-slate-800 dark:text-slate-400 dark:group-hover:text-slate-100">
+            Agregar medicamento
+          </h2>
+          <ChevronDown
+            className={`h-5 w-5 shrink-0 text-slate-400 transition-all duration-200 ease-out group-hover:text-brand-600 dark:text-slate-500 dark:group-hover:text-brand-400 ${altaPanelAbierto ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </button>
+        <div
+          id="panel-alta-medicamento"
+          role="region"
+          aria-labelledby="toggle-alta-medicamento"
+          hidden={!altaPanelAbierto}
+          className={altaPanelAbierto ? 'mt-3' : ''}
+        >
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Mismo formato que inventario: <strong>Número de artículo</strong> (opcional, ej. MED-00004) y{' '}
+            <strong>Descripción del artículo</strong> (obligatoria).
+          </p>
+          <form onSubmit={(e) => void registrarAlta(e)} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="alta-codigo" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                Número de artículo
+              </label>
+              <input
+                id="alta-codigo"
+                type="text"
+                value={altaCodigo}
+                onChange={(e) => setAltaCodigo(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                placeholder="Ej: MED-00004"
+                autoComplete="off"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="alta-descripcion" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                Descripción del artículo *
+              </label>
+              <textarea
+                id="alta-descripcion"
+                value={altaDescripcion}
+                onChange={(e) => setAltaDescripcion(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                placeholder="Texto completo como en inventario / receta"
+              />
+            </div>
+            <div className="sm:col-span-2 flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={guardando || !altaDescripcion.trim()}
+                className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {guardando ? 'Guardando…' : 'Registrar medicamento'}
+              </button>
+              <button
+                type="button"
+                disabled={guardando}
+                onClick={() => {
+                  setAltaCodigo('')
+                  setAltaDescripcion('')
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Limpiar campos
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
