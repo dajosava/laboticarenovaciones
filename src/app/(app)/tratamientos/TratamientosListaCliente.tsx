@@ -2,7 +2,14 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { calcularDiasRestantes, formatoMedicamento, formatearFechaCorta } from '@/lib/utils'
+import {
+  calcularDiasRestantes,
+  clasesColorBadgeKpiPanelRenovaciones,
+  cn,
+  etiquetaPrioridadPanelPrincipal,
+  formatoMedicamento,
+  formatearFechaCorta,
+} from '@/lib/utils'
 import { CheckCircle2, Eye, Pill, Search } from 'lucide-react'
 
 export type TratamientoListaItem = {
@@ -17,41 +24,28 @@ export type TratamientoListaItem = {
   paciente: { nombre: string; telefono: string | null; farmacia_id: string } | null
 }
 
-type GrupoKey = 'critico' | 'proximo' | 'estable'
+type GrupoKey = 'critico' | 'urgente' | 'planificacion' | 'estable'
 
 function grupoPorDias(dias: number): GrupoKey {
   if (dias <= 1) return 'critico'
-  if (dias <= 15) return 'proximo'
+  if (dias <= 5) return 'urgente'
+  if (dias <= 15) return 'planificacion'
   return 'estable'
 }
 
-function etiquetaRiesgoVisual(dias: number): string {
-  if (dias < 0) return '🔴 ATRASADO'
-  if (dias === 0) return '🔴 Vence hoy'
-  if (dias === 1) return '🔴 Vence mañana'
-  if (dias <= 5) return '🟠 PRONTO'
-  if (dias <= 15) return '🟡 En ventana'
-  return '🟢 Al día'
-}
-
 function borderLateral(dias: number): string {
-  if (dias < 0) return 'border-l-4 border-l-red-500/70'
-  if (dias <= 1) return 'border-l-4 border-l-red-500/60'
-  if (dias <= 5) return 'border-l-4 border-l-amber-500/60'
-  if (dias <= 15) return 'border-l-4 border-l-amber-400/50'
-  return 'border-l-4 border-l-emerald-500/40'
+  if (dias < 0) return 'border-l-4 border-l-red-500'
+  if (dias <= 1) return 'border-l-4 border-l-orange-500'
+  if (dias <= 5) return 'border-l-4 border-l-yellow-500'
+  if (dias <= 15) return 'border-l-4 border-l-teal-500'
+  return 'border-l-4 border-l-emerald-500'
 }
 
 function badgeEstadoDominante(dias: number): string {
-  if (dias < 0)
-    return 'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold uppercase leading-tight tracking-wide text-red-800 dark:text-red-300'
-  if (dias <= 1)
-    return 'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold uppercase leading-tight tracking-wide text-red-800 dark:text-red-400'
-  if (dias <= 5)
-    return 'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold uppercase leading-tight tracking-wide text-amber-900 dark:text-amber-300'
-  if (dias <= 15)
-    return 'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold uppercase leading-tight tracking-wide text-amber-900 dark:text-amber-200'
-  return 'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold uppercase leading-tight tracking-wide text-emerald-900 dark:text-emerald-300'
+  return cn(
+    'inline-flex max-w-[14rem] items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-bold uppercase leading-tight tracking-wide',
+    clasesColorBadgeKpiPanelRenovaciones(dias),
+  )
 }
 
 const GRUPO_META: Record<
@@ -63,19 +57,24 @@ const GRUPO_META: Record<
     subtitulo: 'Vencimiento hoy, mañana o ya atrasado — prioridad máxima',
     barClass: 'bg-red-500/10 text-red-900 dark:bg-red-500/20 dark:text-red-100',
   },
-  proximo: {
-    titulo: 'Próximos a vencer',
-    subtitulo: 'Entre 2 y 15 días — seguimiento activo',
-    barClass: 'bg-amber-500/10 text-amber-950 dark:bg-amber-500/15 dark:text-amber-50',
+  urgente: {
+    titulo: 'Urgente',
+    subtitulo: 'Entre 2 y 5 días hasta el vencimiento',
+    barClass: 'bg-yellow-500/10 text-yellow-950 dark:bg-yellow-500/15 dark:text-yellow-50',
+  },
+  planificacion: {
+    titulo: 'Entre 6 y 15 días — Planificación',
+    subtitulo: 'Ventana de agenda y preventivo',
+    barClass: 'bg-teal-500/10 text-teal-950 dark:bg-teal-500/15 dark:text-teal-50',
   },
   estable: {
-    titulo: 'Estables',
-    subtitulo: 'Más de 15 días — planificación',
+    titulo: 'Al día',
+    subtitulo: 'Tiempo a renovación mayor a 15 días',
     barClass: 'bg-emerald-500/10 text-emerald-950 dark:bg-emerald-500/15 dark:text-emerald-50',
   },
 }
 
-type FiltroEstado = 'todos' | 'critico' | 'proximo' | 'estable'
+type FiltroEstado = 'todos' | 'critico' | 'urgente' | 'planificacion' | 'estable'
 type FiltroDias = 'todos' | 'vencido' | '0-5' | '6-15' | '16+'
 
 export default function TratamientosListaCliente({ items }: { items: TratamientoListaItem[] }) {
@@ -121,21 +120,24 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
 
   const porGrupo = useMemo(() => {
     const critico: TratamientoListaItem[] = []
-    const proximo: TratamientoListaItem[] = []
+    const urgente: TratamientoListaItem[] = []
+    const planificacion: TratamientoListaItem[] = []
     const estable: TratamientoListaItem[] = []
     for (const t of ordenados) {
       const d = calcularDiasRestantes(t.fecha_vencimiento)
       const g = grupoPorDias(d)
       if (g === 'critico') critico.push(t)
-      else if (g === 'proximo') proximo.push(t)
+      else if (g === 'urgente') urgente.push(t)
+      else if (g === 'planificacion') planificacion.push(t)
       else estable.push(t)
     }
-    return { critico, proximo, estable }
+    return { critico, urgente, planificacion, estable }
   }, [ordenados])
 
   const bloques: { key: GrupoKey; rows: TratamientoListaItem[] }[] = [
     { key: 'critico', rows: porGrupo.critico },
-    { key: 'proximo', rows: porGrupo.proximo },
+    { key: 'urgente', rows: porGrupo.urgente },
+    { key: 'planificacion', rows: porGrupo.planificacion },
     { key: 'estable', rows: porGrupo.estable },
   ]
 
@@ -173,8 +175,9 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
             >
               <option value="todos">Todos</option>
               <option value="critico">Vencidos / críticos</option>
-              <option value="proximo">Próximos</option>
-              <option value="estable">Estables</option>
+              <option value="urgente">Urgente (2–5 días)</option>
+              <option value="planificacion">Planificación (6–15 días)</option>
+              <option value="estable">Al día (más de 15 días)</option>
             </select>
           </label>
           <label className="flex min-w-[8rem] flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -277,7 +280,7 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
                           >
                             <td className="px-3 py-2 align-middle">
                               <span className={badgeEstadoDominante(dias)} title={`${dias} días hasta vencimiento`}>
-                                {etiquetaRiesgoVisual(dias)}
+                                {etiquetaPrioridadPanelPrincipal(dias)}
                               </span>
                             </td>
                             <td className="px-3 py-2 align-middle">
@@ -303,14 +306,14 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
                               <span
                                 className={`font-mono text-xs font-bold ${
                                   dias < 0
-                                    ? 'text-red-600 dark:text-red-400'
+                                    ? 'text-red-600 dark:text-red-300'
                                     : dias <= 1
-                                      ? 'text-red-600 dark:text-red-400'
+                                      ? 'text-orange-600 dark:text-orange-300'
                                       : dias <= 5
-                                        ? 'text-amber-700 dark:text-amber-400'
+                                        ? 'text-yellow-600 dark:text-yellow-300'
                                         : dias <= 15
-                                          ? 'text-amber-700 dark:text-amber-300'
-                                          : 'text-emerald-700 dark:text-emerald-400'
+                                          ? 'text-teal-600 dark:text-teal-300'
+                                          : 'text-emerald-600 dark:text-emerald-300'
                                 }`}
                               >
                                 {dias < 0 ? `${dias}` : `${dias}d`}

@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import {
   calcularDiasRestantes,
   calcularDiasRestantesEnReferencia,
+  clasesColorBadgeKpiPanelRenovaciones,
+  etiquetaPrioridadPanelPrincipal,
   ordenarTratamientosPorPrioridadPanel,
 } from '@/lib/utils'
 import type { Tratamiento } from '@/types'
@@ -36,30 +38,9 @@ function buildUrlFiltros(ver: FiltroVer, filtros: Set<FiltroNivel>, toggle?: Fil
 }
 
 function getBadgeUrgencia(dias: number): { className: string; label: string } {
-  if (dias < 0) {
-    const d = -dias
-    return {
-      className: 'bg-red-50 text-red-800 border-red-200/80 dark:bg-red-950/50 dark:text-red-200 dark:border-red-800/60',
-      label: d === 1 ? '1 día vencido' : `${d} días vencidos`,
-    }
-  }
-  if (dias <= 1) {
-    return {
-      className:
-        'bg-orange-50 text-orange-900 border-orange-200/80 dark:bg-orange-950/40 dark:text-orange-200 dark:border-orange-800/60',
-      label: 'Crítico',
-    }
-  }
-  if (dias <= 5) {
-    return {
-      className:
-        'bg-amber-50 text-amber-900 border-amber-200/80 dark:bg-amber-950/35 dark:text-amber-200 dark:border-amber-800/60',
-      label: 'Urgente',
-    }
-  }
   return {
-    className: 'bg-sky-50 text-sky-900 border-sky-200/80 dark:bg-sky-950/35 dark:text-sky-200 dark:border-sky-800/60',
-    label: 'Planificación',
+    className: clasesColorBadgeKpiPanelRenovaciones(dias),
+    label: etiquetaPrioridadPanelPrincipal(dias),
   }
 }
 

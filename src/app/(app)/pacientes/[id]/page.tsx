@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import {
   calcularDiasRestantes,
+  clasesColorBadgeKpiPanelRenovaciones,
+  cn,
   formatearFechaCorta,
   formatoMedicamento,
-  getNivelUrgencia,
 } from '@/lib/utils'
 import type { Renovacion, Tratamiento } from '@/types'
 import Link from 'next/link'
@@ -311,7 +312,6 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
               <div className="space-y-4">
                 {tratamientosActivos.map((t: Tratamiento) => {
                   const dias = calcularDiasRestantes(t.fecha_vencimiento)
-                  const nivel = getNivelUrgencia(dias)
                   const riesgo = riesgoTratamiento(dias)
                   const porcentaje = Math.max(0, Math.min(100, (dias / 30) * 100))
                   return (
@@ -327,17 +327,12 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                           </p>
                         </div>
                         <span
-                          className={`self-start rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                            nivel === 'critico'
-                              ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200'
-                              : nivel === 'urgente'
-                                ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
-                                : nivel === 'temprano'
-                                  ? 'border-yellow-200 bg-yellow-50 text-yellow-900 dark:border-yellow-900 dark:bg-yellow-950/30 dark:text-yellow-200'
-                                  : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
-                          }`}
+                          className={cn(
+                            'self-start rounded-full border px-2.5 py-1 text-xs font-semibold',
+                            clasesColorBadgeKpiPanelRenovaciones(dias),
+                          )}
                         >
-                          {dias < 0 ? 'Vencido' : dias <= 1 ? 'Crítico' : dias <= 5 ? 'Urgente' : 'Planificación'}
+                          {dias < 0 ? 'Vencido' : dias <= 1 ? 'Crítico' : dias <= 5 ? 'Urgente' : dias <= 15 ? 'Planificación' : 'Al día'}
                         </span>
                       </div>
 

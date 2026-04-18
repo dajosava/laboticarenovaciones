@@ -44,6 +44,39 @@ export function bandaOrdenPanelRenovaciones(diasRestantes: number): number {
   return 3
 }
 
+/** Texto de prioridad igual al panel principal (dashboard / tratamientos). Planificación = 6–15 días; a partir de 16, al día. */
+export function etiquetaPrioridadPanelPrincipal(diasRestantes: number): string {
+  if (diasRestantes < 0) {
+    const d = -diasRestantes
+    return d === 1 ? '1 día vencido' : `${d} días vencidos`
+  }
+  if (diasRestantes <= 1) return 'Crítico'
+  if (diasRestantes <= 5) return 'Urgente'
+  if (diasRestantes <= 15) return 'Planificación'
+  return 'Al día'
+}
+
+/**
+ * Fondo, borde y texto de la pastilla de prioridad, alineados a los KPI del panel principal
+ * (Vencidos=rojo, Crítico=naranja, Urgente=amarillo, Planificación=teal, Al día=esmeralda).
+ * Pensado para combinar con una clase base que incluya `border` (grosor).
+ */
+export function clasesColorBadgeKpiPanelRenovaciones(diasRestantes: number): string {
+  if (diasRestantes < 0) {
+    return 'border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300'
+  }
+  if (diasRestantes <= 1) {
+    return 'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+  }
+  if (diasRestantes <= 5) {
+    return 'border-yellow-200 bg-yellow-50 text-yellow-600 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+  }
+  if (diasRestantes <= 15) {
+    return 'border-teal-200 bg-teal-50 text-teal-600 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+  }
+  return 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+}
+
 /** Orden por defecto del panel: vencidos → crítico → urgente → planificación; misma banda por fecha de vencimiento ascendente. */
 export function ordenarTratamientosPorPrioridadPanel<T extends { fecha_vencimiento: string }>(list: T[]): T[] {
   return [...list].sort((a, b) => {

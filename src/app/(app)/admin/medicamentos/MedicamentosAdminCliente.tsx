@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
-import { actualizarMedicamento, crearMedicamento } from './actions'
+import { actualizarMedicamento, crearMedicamento, importarMedicamentosDesdeTexto } from './actions'
+
+/**
+ * Carga masiva desde Excel (pegar como TSV). Por defecto está oculta en la UI.
+ * Para volver a mostrar el panel: cambia a `true`, guarda y recarga `/admin/medicamentos`.
+ */
+const MOSTRAR_SECCION_IMPORT_MASIVO = false
 
 export type MedicamentoRow = {
   id: string
@@ -36,6 +42,8 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
   const [altaCodigo, setAltaCodigo] = useState('')
   const [altaDescripcion, setAltaDescripcion] = useState('')
   const [altaPanelAbierto, setAltaPanelAbierto] = useState(true)
+  const [textoImportMasivo, setTextoImportMasivo] = useState('')
+  const [importandoMasivo, setImportandoMasivo] = useState(false)
 
   const [modalEditar, setModalEditar] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -139,6 +147,28 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
     router.refresh()
   }
 
+  async function ejecutarImportMasivo() {
+    if (!textoImportMasivo.trim()) {
+      toast.error('Pega primero las filas copiadas desde Excel')
+      return
+    }
+    setImportandoMasivo(true)
+    try {
+      const r = await importarMedicamentosDesdeTexto(textoImportMasivo)
+      if (r.error) {
+        toast.error(r.error)
+        return
+      }
+      toast.success(
+        `Importación listada: ${r.insertados ?? 0} nuevos · ${r.omitidos ?? 0} omitidos (duplicados por código o descripción)`,
+      )
+      setTextoImportMasivo('')
+      router.refresh()
+    } finally {
+      setImportandoMasivo(false)
+    }
+  }
+
   return (
     <div className="space-y-8">
       <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 md:p-6">
@@ -220,6 +250,45 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
           </form>
         </div>
       </section>
+
+      {MOSTRAR_SECCION_IMPORT_MASIVO ? (
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 md:p-6">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Importación masiva (Excel)
+          </h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Copia desde Excel filas con <strong className="text-slate-800 dark:text-slate-100">número de artículo (MED-…)</strong> y{' '}
+            <strong className="text-slate-800 dark:text-slate-100">descripción</strong> separados por <strong>tabulador</strong> (una fila por
+            medicamento). Se omiten líneas duplicadas respecto al catálogo actual.
+          </p>
+          <textarea
+            value={textoImportMasivo}
+            onChange={(e) => setTextoImportMasivo(e.target.value)}
+            rows={10}
+            placeholder={'MED-00001\tDescripción del artículo…\nMED-00002\tOtro medicamento…'}
+            className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs leading-relaxed dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+            spellCheck={false}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={importandoMasivo || !textoImportMasivo.trim()}
+              onClick={() => void ejecutarImportMasivo()}
+              className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {importandoMasivo ? 'Importando…' : 'Importar al catálogo'}
+            </button>
+            <button
+              type="button"
+              disabled={importandoMasivo}
+              onClick={() => setTextoImportMasivo('')}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Limpiar pegado
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">

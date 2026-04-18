@@ -4,6 +4,44 @@ Todos los cambios relevantes del proyecto se documentan en este archivo.
 
 ---
 
+## [0.12.0] — 2026-04-16
+
+### Catálogo de medicamentos (admin), reportes (UI), ficha y tratamientos (prioridad y colores), tema oscuro
+
+#### Admin — medicamentos: alta, búsqueda, import masivo opcional
+
+- **`supabase/migrations/009_medicamentos_catalogo.sql`** y **`010_medicamentos_codigo_descripcion.sql`** — Catálogo `medicamentos` con `codigo`, `descripcion` (y `nombre` ampliado donde aplique) para alinear inventario/receta con el resto de la app.
+- **`src/lib/medicamentos-admin-query.ts`** — `fetchMedicamentosAdminList`: listado con filtros `q` (búsqueda servidor) y activos/inactivos.
+- **`src/app/(app)/admin/medicamentos/page.tsx`** — Conteos exactos (`count: 'exact'`), lectura de `searchParams` (`q`, `solo`), `Suspense` + cliente; eliminado el párrafo redundante sobre formato Excel en cabecera.
+- **`src/app/(app)/admin/medicamentos/MedicamentosAdminCliente.tsx`** — Formulario fijo **Agregar medicamento** (código + descripción + registrar/limpiar), cabecera **colapsable** con hover/focus; búsqueda con debounce hacia la URL; tabla con altura acotada y scroll; modal solo para **editar**; activar/desactivar filas.
+- **`src/app/(app)/admin/medicamentos/actions.ts`** — `crearMedicamento`, `actualizarMedicamento`, **`importarMedicamentosDesdeTexto`** (carga masiva por texto TSV).
+- **`src/lib/medicamentos-import.ts`** — `parseMedicamentosPegado` y utilidades de etiquetado para import y recetas.
+
+##### Cómo volver a mostrar la importación masiva (Excel / pegado)
+
+1. Abre **`src/app/(app)/admin/medicamentos/MedicamentosAdminCliente.tsx`**.
+2. Arriba del componente, localiza la constante **`MOSTRAR_SECCION_IMPORT_MASIVO`** (por defecto `false`).
+3. Cámbiala a **`true`**, guarda el archivo y recarga **`/admin/medicamentos`**.
+4. Aparecerá la sección **«Importación masiva (Excel)»**: pega filas con **MED-… + tabulador + descripción** (copiado desde Excel como TSV) y pulsa **Importar al catálogo**. La server action omite duplicados por código o descripción ya existente.
+5. Cuando termines, vuelve a poner **`false`** si no quieres que el panel quede visible para el resto de usuarios.
+
+#### Reportes globales — filtros y tema oscuro
+
+- **`src/app/(app)/admin/reportes/ReportesGlobalesCliente.tsx`** — Contenedor sticky de filtros con **esquinas redondeadas** (`rounded-2xl`) y borde/sombra alineados al resto de la app; bloque interior de filtros con el mismo criterio; campos de fecha/select con `rounded-xl`.
+- **`src/app/globals.css`** — En `html.dark`: **`color-scheme: dark`** en `input[type=date]` y `select`; icono del calendario (**`::-webkit-calendar-picker-indicator`**) forzado a tono claro con `brightness(0) invert(1)` para que sea visible sobre fondo oscuro.
+
+#### Ficha del paciente
+
+- **`src/app/(app)/pacientes/[id]/page.tsx`** — Barra de estado: leyendas **Estable — Seguimiento — Crítico** de izquierda a derecha acorde al semáforo; **«Riesgo renovación»** renombrado a **«Necesidad de renovación»**; chips de tratamiento activo con textos **Planificación** (6–15 días) y **Al día** (16+); colores de pastilla alineados a los KPI del panel (ver más abajo).
+
+#### Prioridad y colores unificados (dashboard + tratamientos + utilidades)
+
+- **`src/lib/utils/index.ts`** — **`etiquetaPrioridadPanelPrincipal`**: mismas palabras que el panel (vencidos textuales, Crítico, Urgente, Planificación 6–15, Al día 16+). **`clasesColorBadgeKpiPanelRenovaciones`**: fondo/borde/texto alineados a los **cuatro KPI** del dashboard (rojo, naranja, amarillo, teal) más **esmeralda** para «Al día».
+- **`src/app/(app)/dashboard/page.tsx`** — Badges de la tabla de renovaciones usan esas clases compartidas.
+- **`src/app/(app)/tratamientos/TratamientosListaCliente.tsx`** — Etiquetas de prioridad con **`etiquetaPrioridadPanelPrincipal`**; pastillas y borde lateral de fila con los **mismos colores** que los KPI; columna «días» coherente con esa paleta.
+
+---
+
 ## [0.11.0] — 2026-02-18
 
 ### Reportes globales: pacientes por aseguradora y descarga en PDF
