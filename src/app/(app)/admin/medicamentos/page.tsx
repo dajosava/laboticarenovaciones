@@ -53,10 +53,6 @@ export default async function MedicamentosAdminPage({
             </span>
           ) : null}
         </p>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Mismo formato que tu Excel: <strong>Número de artículo</strong> (MED-xxxxx) y <strong>Descripción del artículo</strong>,
-          pegados con tabulador. Ese texto es el que se usa al elegir medicamento en recetas.
-        </p>
       </div>
 
       <Suspense

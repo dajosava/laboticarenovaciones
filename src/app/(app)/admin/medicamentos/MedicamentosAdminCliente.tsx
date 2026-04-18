@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { parseMedicamentosPegado } from '@/lib/medicamentos-import'
-import { actualizarMedicamento, crearMedicamento, importarMedicamentosDesdeTexto } from './actions'
+import { actualizarMedicamento, crearMedicamento } from './actions'
 
 export type MedicamentoRow = {
   id: string
@@ -29,11 +28,14 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
 
   const [soloActivosLocal, setSoloActivosLocal] = useState(soloActivosEnUrl)
   const [busquedaLocal, setBusquedaLocal] = useState(qEnUrl)
-  const [pegado, setPegado] = useState('')
   const inputBusquedaRef = useRef<HTMLInputElement>(null)
   const busquedaRef = useRef(busquedaLocal)
   busquedaRef.current = busquedaLocal
-  const [modal, setModal] = useState<'nuevo' | 'editar' | null>(null)
+
+  const [altaCodigo, setAltaCodigo] = useState('')
+  const [altaDescripcion, setAltaDescripcion] = useState('')
+
+  const [modalEditar, setModalEditar] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({ codigo: '', descripcion: '' })
   const [guardando, setGuardando] = useState(false)
@@ -66,48 +68,55 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
     return () => window.clearTimeout(t)
   }, [busquedaLocal, soloActivosLocal, router, searchParams.toString()])
 
-  const previewCount = pegado.trim() ? parseMedicamentosPegado(pegado).length : 0
-
-  function abrirNuevo() {
-    setForm({ codigo: '', descripcion: '' })
-    setEditId(null)
-    setModal('nuevo')
-  }
-
   function abrirEditar(m: MedicamentoRow) {
     setForm({
       codigo: m.codigo ?? '',
       descripcion: (m.descripcion ?? m.nombre).trim(),
     })
     setEditId(m.id)
-    setModal('editar')
+    setModalEditar(true)
   }
 
-  async function guardarModal() {
+  async function registrarAlta(e: React.FormEvent) {
+    e.preventDefault()
+    if (!altaDescripcion.trim()) {
+      toast.error('La descripción es obligatoria')
+      return
+    }
     setGuardando(true)
     try {
-      if (modal === 'nuevo') {
-        const r = await crearMedicamento({
-          codigo: form.codigo.trim() || null,
-          descripcion: form.descripcion,
-        })
-        if (r.error) {
-          toast.error(r.error)
-          return
-        }
-        toast.success('Medicamento creado')
-      } else if (modal === 'editar' && editId) {
-        const r = await actualizarMedicamento(editId, {
-          codigo: form.codigo.trim() || null,
-          descripcion: form.descripcion,
-        })
-        if (r.error) {
-          toast.error(r.error)
-          return
-        }
-        toast.success('Cambios guardados')
+      const r = await crearMedicamento({
+        codigo: altaCodigo.trim() || null,
+        descripcion: altaDescripcion,
+      })
+      if (r.error) {
+        toast.error(r.error)
+        return
       }
-      setModal(null)
+      toast.success('Medicamento registrado')
+      setAltaCodigo('')
+      setAltaDescripcion('')
+      router.refresh()
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function guardarEdicion() {
+    if (!editId) return
+    setGuardando(true)
+    try {
+      const r = await actualizarMedicamento(editId, {
+        codigo: form.codigo.trim() || null,
+        descripcion: form.descripcion,
+      })
+      if (r.error) {
+        toast.error(r.error)
+        return
+      }
+      toast.success('Cambios guardados')
+      setModalEditar(false)
+      setEditId(null)
       router.refresh()
     } finally {
       setGuardando(false)
@@ -128,54 +137,65 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
     router.refresh()
   }
 
-  async function importar() {
-    setGuardando(true)
-    try {
-      const r = await importarMedicamentosDesdeTexto(pegado)
-      if (r.error) {
-        toast.error(r.error)
-        return
-      }
-      toast.success(`Importación: ${r.insertados ?? 0} nuevos, ${r.omitidos ?? 0} duplicados omitidos`)
-      setPegado('')
-      router.refresh()
-    } finally {
-      setGuardando(false)
-    }
-  }
-
   return (
     <div className="space-y-8">
       <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 md:p-6">
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          Importar desde Excel
+          Agregar medicamento
         </h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Copia las columnas <strong>Número de artículo</strong> y <strong>Descripción del artículo</strong> desde Excel
-          (deben quedar separadas por <strong>tabulador</strong>, una fila por medicamento). Si la primera celda empieza
-          por <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">MED-</code>, se interpreta como código +
-          descripción.
+          Mismo formato que inventario: <strong>Número de artículo</strong> (opcional, ej. MED-00004) y{' '}
+          <strong>Descripción del artículo</strong> (obligatoria).
         </p>
-        <textarea
-          value={pegado}
-          onChange={(e) => setPegado(e.target.value)}
-          rows={6}
-          className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 font-mono text-xs text-slate-800 shadow-inner outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-          placeholder={'Ejemplo (TSV):\nMED-00004\tAbrilar Jarabe X 100mL\nMED-00009\tAceite Castor Lacofa 60mL'}
-        />
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={guardando || previewCount === 0}
-            onClick={() => void importar()}
-            className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Importar {previewCount > 0 ? `(${previewCount} filas)` : ''}
-          </button>
-          {previewCount > 0 ? (
-            <span className="text-xs text-slate-500 dark:text-slate-400">Vista previa: {previewCount} filas detectadas</span>
-          ) : null}
-        </div>
+        <form onSubmit={(e) => void registrarAlta(e)} className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="alta-codigo" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+              Número de artículo
+            </label>
+            <input
+              id="alta-codigo"
+              type="text"
+              value={altaCodigo}
+              onChange={(e) => setAltaCodigo(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              placeholder="Ej: MED-00004"
+              autoComplete="off"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="alta-descripcion" className="mb-1 block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+              Descripción del artículo *
+            </label>
+            <textarea
+              id="alta-descripcion"
+              value={altaDescripcion}
+              onChange={(e) => setAltaDescripcion(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+              placeholder="Texto completo como en inventario / receta"
+            />
+          </div>
+          <div className="sm:col-span-2 flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={guardando || !altaDescripcion.trim()}
+              className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {guardando ? 'Guardando…' : 'Registrar medicamento'}
+            </button>
+            <button
+              type="button"
+              disabled={guardando}
+              onClick={() => {
+                setAltaCodigo('')
+                setAltaDescripcion('')
+              }}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Limpiar campos
+            </button>
+          </div>
+        </form>
       </section>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -198,13 +218,6 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
             Solo activos
           </label>
         </div>
-        <button
-          type="button"
-          onClick={abrirNuevo}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-700"
-        >
-          Nuevo medicamento
-        </button>
       </div>
 
       <div className="max-h-[min(75vh,calc(3.25rem+15*3rem))] overflow-y-auto overflow-x-auto scroll-smooth rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
@@ -260,12 +273,10 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
         ) : null}
       </div>
 
-      {modal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog">
+      {modalEditar ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              {modal === 'nuevo' ? 'Nuevo medicamento' : 'Editar medicamento'}
-            </h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Editar medicamento</h3>
             <div className="mt-4 space-y-3">
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Número de artículo</label>
@@ -290,7 +301,10 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setModal(null)}
+                onClick={() => {
+                  setModalEditar(false)
+                  setEditId(null)
+                }}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium dark:border-slate-600"
               >
                 Cancelar
@@ -298,7 +312,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
               <button
                 type="button"
                 disabled={guardando || !form.descripcion.trim()}
-                onClick={() => void guardarModal()}
+                onClick={() => void guardarEdicion()}
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {guardando ? 'Guardando…' : 'Guardar'}
