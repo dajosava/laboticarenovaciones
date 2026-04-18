@@ -212,19 +212,19 @@ export const tratamientos = [
 export const renovaciones = [
   {
     id: 'r001', tratamiento_id: 't001', farmacia_id: 'f001', empleado_id: 'mock-user-002',
-    fecha: daysFromNow(-30), notas: 'Renovación mensual', creada_en: isoDaysAgo(30),
+    fecha: daysFromNow(-30), notas: 'Renovación mensual', numero_factura: 'FAC-1001', creada_en: isoDaysAgo(30),
     farmacia: { nombre: farmacias[0]!.nombre },
     empleado: { nombre: 'Ana García Ríos' },
   },
   {
     id: 'r002', tratamiento_id: 't004', farmacia_id: 'f001', empleado_id: 'mock-user-001',
-    fecha: daysFromNow(-30), notas: null, creada_en: isoDaysAgo(30),
+    fecha: daysFromNow(-30), notas: null, numero_factura: null, creada_en: isoDaysAgo(30),
     farmacia: { nombre: farmacias[0]!.nombre },
     empleado: { nombre: 'Carlos Mendoza' },
   },
   {
     id: 'r003', tratamiento_id: 't006', farmacia_id: 'f002', empleado_id: 'mock-user-003',
-    fecha: daysFromNow(-28), notas: 'Paciente pidió presentación de 60 tabletas', creada_en: isoDaysAgo(28),
+    fecha: daysFromNow(-28), notas: 'Paciente pidió presentación de 60 tabletas', numero_factura: null, creada_en: isoDaysAgo(28),
     farmacia: { nombre: farmacias[1]!.nombre },
     empleado: { nombre: 'Roberto López' },
   },

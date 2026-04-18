@@ -33,6 +33,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
     fecha_surtido: hoy,
     tipo: tratamiento.tipo,
     notas: '',
+    numero_factura: '',
     hubo_regalia: false,
     unidades_regalia: '',
   })
@@ -66,6 +67,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
         unidades_caja: Number(form.unidades_caja),
         dosis_diaria: Number(form.dosis_diaria),
         notas: form.notas.trim() || null,
+        numero_factura: form.numero_factura.trim() || null,
         medicamento_id: form.medicamentoId.trim(),
         medicamento: form.medicamento.trim(),
         marca: form.marca.trim() || null,
@@ -239,6 +241,23 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                   </p>
                 </div>
               ) : null}
+            </div>
+
+            <div className="col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Número de factura <span className="font-normal text-slate-500 dark:text-slate-400">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={form.numero_factura}
+                onChange={(e) => setForm((f) => ({ ...f, numero_factura: e.target.value }))}
+                className={inputClass}
+                placeholder="Ej: según su sistema de inventario / POS"
+                autoComplete="off"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Para enlazar esta renovación con la factura o ticket de su farmacia; no se valida contra sistemas externos.
+              </p>
             </div>
 
             <div className="col-span-2">

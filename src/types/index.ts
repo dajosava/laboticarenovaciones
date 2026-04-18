@@ -79,6 +79,8 @@ export interface Renovacion {
   empleado_id: string
   fecha: string
   notas: string | null
+  /** Factura / POS: surtido inicial o renovación (opcional). */
+  numero_factura?: string | null
   creada_en: string
   hubo_regalia?: boolean
   unidades_regalia?: number | null

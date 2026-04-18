@@ -13,6 +13,7 @@ type Row = {
   farmacia_id: string
   fecha: string
   notas: string | null
+  numero_factura?: string | null
   farmacia?: { nombre: string } | null
   empleado?: { nombre: string } | null
   tratamiento?: {
@@ -98,6 +99,7 @@ export default async function RenovacionesPage() {
       tratamiento_id: r.tratamiento_id,
       fecha: r.fecha,
       notas: r.notas,
+      numero_factura: r.numero_factura ?? null,
       farmaciaNombre: r.farmacia?.nombre ?? '—',
       empleadoNombre: r.empleado?.nombre ?? '—',
       pacienteId: tr?.paciente_id ?? null,

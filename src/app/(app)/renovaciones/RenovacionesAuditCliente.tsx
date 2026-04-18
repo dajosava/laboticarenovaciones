@@ -21,6 +21,7 @@ export type RenovacionAuditItem = {
   tratamiento_id: string
   fecha: string
   notas: string | null
+  numero_factura: string | null
   farmaciaNombre: string
   empleadoNombre: string
   pacienteId: string | null
@@ -342,6 +343,14 @@ export default function RenovacionesAuditCliente({
                                 <>⏱ Primera renovación registrada en este tratamiento</>
                               )}
                             </p>
+                            {item.numero_factura?.trim() ? (
+                              <p className="mt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                                Factura:{' '}
+                                <span className="font-mono font-normal text-slate-800 dark:text-slate-200">
+                                  {item.numero_factura.trim()}
+                                </span>
+                              </p>
+                            ) : null}
                             <div className="mt-1.5 text-[11px]">
                               {nota ? (
                                 <p className="text-slate-600 dark:text-slate-400" title={nota.length > 90 ? nota : undefined}>

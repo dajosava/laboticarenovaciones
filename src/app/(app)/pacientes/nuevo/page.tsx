@@ -54,6 +54,7 @@ export default function NuevoPacientePage() {
     fecha_surtido: new Date().toISOString().split('T')[0],
     tipo: 'cronico',
     notas: '',
+    numero_factura: '',
   })
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function NuevoPacientePage() {
 
       // 2. Crear primer tratamiento si se llenó
       if (tratamiento.medicamentoId && fechaVencimientoPreview) {
-        const { error: errTrat } = await supabase
+        const { data: nuevoTrat, error: errTrat } = await supabase
           .from('tratamientos')
           .insert({
             paciente_id: nuevoPaciente.id,
@@ -143,8 +144,36 @@ export default function NuevoPacientePage() {
             notas: tratamiento.notas || null,
             registrado_por: user!.id,
           })
+          .select('id')
+          .single()
 
         if (errTrat) throw errTrat
+
+        const factura = tratamiento.numero_factura?.trim()
+        if (factura) {
+          const { data: emp } = await supabase.from('empleados').select('farmacia_id').eq('id', user!.id).single()
+          const farmaciaId = emp?.farmacia_id ?? nuevoPaciente.farmacia_id
+          if (!farmaciaId) {
+            await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+            await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+            throw new Error('No se pudo determinar la farmacia para guardar el número de factura')
+          }
+          const { error: errRen } = await supabase.from('renovaciones').insert({
+            tratamiento_id: nuevoTrat.id,
+            farmacia_id: farmaciaId,
+            empleado_id: user!.id,
+            fecha: tratamiento.fecha_surtido,
+            notas: null,
+            numero_factura: factura,
+            hubo_regalia: false,
+            unidades_regalia: null,
+          })
+          if (errRen) {
+            await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+            await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+            throw errRen
+          }
+        }
       }
 
       toast.success('Paciente registrado exitosamente')
@@ -306,6 +335,20 @@ export default function NuevoPacientePage() {
                 <option value="cronico">Crónico (permanente)</option>
                 <option value="temporal">Temporal (con fecha fin)</option>
               </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de factura <span className="font-normal text-gray-500">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={tratamiento.numero_factura}
+                onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Según inventario / POS de la farmacia"
+                autoComplete="off"
+              />
+              <p className="mt-1 text-xs text-gray-500">Para enlazar el surtido inicial con la factura de su sistema.</p>
             </div>
 
             {/* Preview fecha de vencimiento */}

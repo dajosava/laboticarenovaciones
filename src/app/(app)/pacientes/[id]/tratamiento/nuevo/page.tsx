@@ -26,6 +26,7 @@ export default function NuevoTratamientoPage() {
     fecha_surtido: new Date().toISOString().split('T')[0],
     tipo: 'cronico' as 'cronico' | 'temporal',
     notas: '',
+    numero_factura: '',
   })
 
   const fechaVencimientoPreview =
@@ -58,22 +59,53 @@ export default function NuevoTratamientoPage() {
         return
       }
 
-      const { error } = await supabase.from('tratamientos').insert({
-        paciente_id: pacienteId,
-        medicamento_id: tratamiento.medicamentoId.trim(),
-        medicamento: tratamiento.medicamento.trim(),
-        marca: tratamiento.marca.trim() || null,
-        concentracion: tratamiento.concentracion.trim() || null,
-        dosis_diaria: Number(tratamiento.dosis_diaria),
-        unidades_caja: Number(tratamiento.unidades_caja),
-        fecha_surtido: tratamiento.fecha_surtido,
-        fecha_vencimiento: fechaVencimientoPreview,
-        tipo: tratamiento.tipo,
-        notas: tratamiento.notas.trim() || null,
-        registrado_por: user.id,
-      })
+      const { data: nuevoTrat, error: errTrat } = await supabase
+        .from('tratamientos')
+        .insert({
+          paciente_id: pacienteId,
+          medicamento_id: tratamiento.medicamentoId.trim(),
+          medicamento: tratamiento.medicamento.trim(),
+          marca: tratamiento.marca.trim() || null,
+          concentracion: tratamiento.concentracion.trim() || null,
+          dosis_diaria: Number(tratamiento.dosis_diaria),
+          unidades_caja: Number(tratamiento.unidades_caja),
+          fecha_surtido: tratamiento.fecha_surtido,
+          fecha_vencimiento: fechaVencimientoPreview,
+          tipo: tratamiento.tipo,
+          notas: tratamiento.notas.trim() || null,
+          registrado_por: user.id,
+        })
+        .select('id')
+        .single()
 
-      if (error) throw error
+      if (errTrat) throw errTrat
+
+      const factura = tratamiento.numero_factura.trim()
+      if (factura) {
+        const [empleadoRes, pacienteRes] = await Promise.all([
+          supabase.from('empleados').select('farmacia_id').eq('id', user.id).single(),
+          supabase.from('pacientes').select('farmacia_id').eq('id', pacienteId).single(),
+        ])
+        const farmaciaId = empleadoRes.data?.farmacia_id ?? pacienteRes.data?.farmacia_id
+        if (!farmaciaId) {
+          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+          throw new Error('No se pudo determinar la farmacia para guardar el número de factura')
+        }
+        const { error: errRen } = await supabase.from('renovaciones').insert({
+          tratamiento_id: nuevoTrat.id,
+          farmacia_id: farmaciaId,
+          empleado_id: user.id,
+          fecha: tratamiento.fecha_surtido,
+          notas: null,
+          numero_factura: factura,
+          hubo_regalia: false,
+          unidades_regalia: null,
+        })
+        if (errRen) {
+          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+          throw errRen
+        }
+      }
       toast.success('Tratamiento registrado')
       router.push(`/pacientes/${pacienteId}`)
       router.refresh()
@@ -192,6 +224,20 @@ export default function NuevoTratamientoPage() {
                 <option value="cronico">Crónico (permanente)</option>
                 <option value="temporal">Temporal (con fecha fin)</option>
               </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de factura <span className="font-normal text-gray-500">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={tratamiento.numero_factura}
+                onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Según inventario / POS de la farmacia"
+                autoComplete="off"
+              />
+              <p className="mt-1 text-xs text-gray-500">Para enlazar el surtido inicial con la factura de su sistema.</p>
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>

@@ -37,7 +37,14 @@ export async function marcarContactadosMasivo(tratamientoIds: string[]): Promise
 export type TimelinePreview = {
   pacienteNombre: string
   tratamientos: { id: string; medicamento: string; activo: boolean; fecha_vencimiento: string; contactado_renovacion_en: string | null }[]
-  renovaciones: { id: string; fecha: string; notas: string | null; farmacia?: { nombre: string } | null; empleado?: { nombre: string } | null }[]
+  renovaciones: {
+    id: string
+    fecha: string
+    notas: string | null
+    numero_factura?: string | null
+    farmacia?: { nombre: string } | null
+    empleado?: { nombre: string } | null
+  }[]
 }
 
 export async function getTimelinePreview(pacienteId: string): Promise<{ data?: TimelinePreview; error?: string }> {
@@ -71,7 +78,7 @@ export async function getTimelinePreview(pacienteId: string): Promise<{ data?: T
     tids.length > 0
       ? await supabase
           .from('renovaciones')
-          .select('id, fecha, notas, farmacia:farmacias(nombre), empleado:empleados(nombre)')
+          .select('id, fecha, notas, numero_factura, farmacia:farmacias(nombre), empleado:empleados(nombre)')
           .in('tratamiento_id', tids)
           .order('fecha', { ascending: false })
           .limit(15)

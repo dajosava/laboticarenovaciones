@@ -424,6 +424,11 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                           Regalía: +{r.unidades_regalia} unidad{r.unidades_regalia !== 1 ? 'es' : ''}
                         </p>
                       ) : null}
+                      {r.numero_factura?.trim() ? (
+                        <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
+                        </p>
+                      ) : null}
                       {r.notas ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}
                     </li>
                   )

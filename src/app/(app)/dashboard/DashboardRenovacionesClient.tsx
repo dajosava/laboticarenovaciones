@@ -115,6 +115,11 @@ function TimelineModal({
                         {r.fecha.slice(0, 10)}
                         {r.empleado?.nombre ? ` · ${r.empleado.nombre}` : ''}
                       </p>
+                      {r.numero_factura?.trim() ? (
+                        <p className="mt-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
+                        </p>
+                      ) : null}
                       {r.notas ? <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}
                     </li>
                   ))}

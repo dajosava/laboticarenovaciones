@@ -44,6 +44,8 @@ export type DatosRenovacion = {
   unidades_caja: number
   dosis_diaria: number
   notas?: string | null
+  /** Número de factura del inventario de la farmacia (opcional). */
+  numero_factura?: string | null
   medicamento_id?: string | null
   medicamento?: string
   marca?: string | null
@@ -116,6 +118,7 @@ export async function registrarRenovacion(
         empleado_id: user.id,
         fecha: datos.fecha_surtido,
         notas: datos.notas?.trim() || null,
+        numero_factura: datos.numero_factura?.trim() || null,
         hubo_regalia: huboRegalia,
         unidades_regalia: huboRegalia ? extraRegalia : null,
       })
