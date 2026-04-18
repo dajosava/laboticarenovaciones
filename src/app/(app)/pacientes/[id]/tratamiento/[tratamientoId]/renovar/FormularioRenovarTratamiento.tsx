@@ -7,6 +7,8 @@ import { calcularFechaVencimiento } from '@/lib/utils'
 import { toast } from 'sonner'
 import { registrarRenovacion } from '../../../actions'
 import type { Tratamiento } from '@/types'
+import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
+import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-brand-500'
@@ -22,6 +24,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
   const hoy = new Date().toISOString().split('T')[0]
 
   const [form, setForm] = useState({
+    medicamentoId: tratamiento.medicamento_id ?? '',
     medicamento: tratamiento.medicamento,
     marca: tratamiento.marca ?? '',
     concentracion: tratamiento.concentracion ?? '',
@@ -44,6 +47,10 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.medicamentoId.trim()) {
+      toast.error('Selecciona un medicamento del catálogo')
+      return
+    }
     if (!fechaVencimientoPreview) {
       toast.error(
         form.hubo_regalia && unidadesRegaliaNum < 1
@@ -59,6 +66,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
         unidades_caja: Number(form.unidades_caja),
         dosis_diaria: Number(form.dosis_diaria),
         notas: form.notas.trim() || null,
+        medicamento_id: form.medicamentoId.trim(),
         medicamento: form.medicamento.trim(),
         marca: form.marca.trim() || null,
         concentracion: form.concentracion.trim() || null,
@@ -101,14 +109,27 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">Precargado con el tratamiento actual. Cambia solo lo necesario.</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre del medicamento *</label>
-              <input
-                type="text"
-                required
-                value={form.medicamento}
-                onChange={(e) => setForm((f) => ({ ...f, medicamento: e.target.value }))}
-                className={inputClass}
-                placeholder="Ej: Metformina"
+              <MedicamentoCombobox
+                medicamentoId={form.medicamentoId}
+                onMedicamentoChange={(row) => {
+                  if (!row) {
+                    setForm((f) => ({
+                      ...f,
+                      medicamentoId: '',
+                      medicamento: '',
+                      marca: '',
+                      concentracion: '',
+                    }))
+                    return
+                  }
+                  setForm((f) => ({
+                    ...f,
+                    medicamentoId: row.id,
+                    medicamento: textoMedicamentoParaReceta(row),
+                    marca: row.marca ?? '',
+                    concentracion: row.concentracion ?? '',
+                  }))
+                }}
               />
             </div>
             <div>

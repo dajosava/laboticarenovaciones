@@ -58,6 +58,11 @@ class MockQueryBuilder {
     return makeThenableResult(result)
   }
 
+  maybeSingle() {
+    const result = { data: this._data[0] ?? null, error: null }
+    return makeThenableResult(result)
+  }
+
   then(onfulfilled?: any, onrejected?: any): Promise<any> {
     return Promise.resolve({ data: this._data, error: null }).then(onfulfilled, onrejected)
   }

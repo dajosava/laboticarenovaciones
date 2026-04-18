@@ -53,6 +53,7 @@ export interface Paciente {
 export interface Tratamiento {
   id: string
   paciente_id: string
+  medicamento_id?: string | null
   medicamento: string
   marca?: string | null
   concentracion?: string | null

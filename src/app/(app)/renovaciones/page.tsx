@@ -137,11 +137,11 @@ export default async function RenovacionesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div className="mx-auto max-w-7xl p-6">
       <div className="mb-4">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Renovaciones</h1>
         {empleado?.rol === 'super_admin' && nombreFiltroSucursal ? (
-          <p className="mt-1 text-sm font-medium text-brand-700 dark:text-brand-400">
+          <p className="mt-1 text-sm font-medium text-emerald-800 dark:text-emerald-300">
             Sucursal seleccionada: {nombreFiltroSucursal}
           </p>
         ) : null}

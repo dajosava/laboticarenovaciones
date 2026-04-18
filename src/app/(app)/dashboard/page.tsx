@@ -466,7 +466,7 @@ export default async function DashboardPage({
           <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-700 dark:text-slate-200">Resumen del sistema (hoy)</h2>
         </div>
         {nombreFiltroSucursal ? (
-          <p className="mb-4 text-sm font-medium text-brand-700 dark:text-brand-400">
+          <p className="mb-4 text-sm font-medium text-emerald-800 dark:text-emerald-300">
             Vista filtrada por sucursal: {nombreFiltroSucursal} (KPIs, resumen y tabla de renovaciones).
           </p>
         ) : null}

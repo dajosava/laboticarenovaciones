@@ -44,6 +44,7 @@ export type DatosRenovacion = {
   unidades_caja: number
   dosis_diaria: number
   notas?: string | null
+  medicamento_id?: string | null
   medicamento?: string
   marca?: string | null
   concentracion?: string | null
@@ -97,6 +98,7 @@ export async function registrarRenovacion(
     dosis_diaria: datos.dosis_diaria,
     contactado_renovacion_en: null,
   }
+  if (datos.medicamento_id !== undefined) updatePayload.medicamento_id = datos.medicamento_id || null
   if (datos.medicamento !== undefined) updatePayload.medicamento = datos.medicamento.trim()
   if (datos.marca !== undefined) updatePayload.marca = datos.marca?.trim() || null
   if (datos.concentracion !== undefined) updatePayload.concentracion = datos.concentracion?.trim() || null

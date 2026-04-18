@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { calcularFechaVencimiento } from '@/lib/utils'
 import { toast } from 'sonner'
+import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
+import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
 
 export default function NuevoTratamientoPage() {
   const router = useRouter()
@@ -15,6 +17,7 @@ export default function NuevoTratamientoPage() {
   const [loading, setLoading] = useState(false)
 
   const [tratamiento, setTratamiento] = useState({
+    medicamentoId: '',
     medicamento: '',
     marca: '',
     concentracion: '',
@@ -38,8 +41,8 @@ export default function NuevoTratamientoPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!tratamiento.medicamento.trim()) {
-      toast.error('El nombre del medicamento es obligatorio')
+    if (!tratamiento.medicamentoId.trim()) {
+      toast.error('Selecciona un medicamento del catálogo')
       return
     }
     if (!fechaVencimientoPreview) {
@@ -57,6 +60,7 @@ export default function NuevoTratamientoPage() {
 
       const { error } = await supabase.from('tratamientos').insert({
         paciente_id: pacienteId,
+        medicamento_id: tratamiento.medicamentoId.trim(),
         medicamento: tratamiento.medicamento.trim(),
         marca: tratamiento.marca.trim() || null,
         concentracion: tratamiento.concentracion.trim() || null,
@@ -100,14 +104,27 @@ export default function NuevoTratamientoPage() {
           <p className="text-sm text-gray-400 mb-4">Completa los datos para el seguimiento en el dashboard.</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del medicamento *</label>
-              <input
-                type="text"
-                required
-                value={tratamiento.medicamento}
-                onChange={e => setTratamiento(t => ({ ...t, medicamento: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: Metformina"
+              <MedicamentoCombobox
+                medicamentoId={tratamiento.medicamentoId}
+                onMedicamentoChange={(row) => {
+                  if (!row) {
+                    setTratamiento((t) => ({
+                      ...t,
+                      medicamentoId: '',
+                      medicamento: '',
+                      marca: '',
+                      concentracion: '',
+                    }))
+                    return
+                  }
+                  setTratamiento((t) => ({
+                    ...t,
+                    medicamentoId: row.id,
+                    medicamento: textoMedicamentoParaReceta(row),
+                    marca: row.marca ?? '',
+                    concentracion: row.concentracion ?? '',
+                  }))
+                }}
               />
             </div>
             <div>

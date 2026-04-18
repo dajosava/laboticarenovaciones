@@ -406,7 +406,14 @@ export default function ReportesGlobalesCliente({ payload }: { payload: Reportes
         </div>
         <p className="text-[11px] text-slate-500 dark:text-slate-400">
           Comparación automática con un periodo anterior de la misma duración ({diasPeriodo} días).
-          {farmaciaId ? ` · Sucursal: ${farmacias.find((f) => f.id === farmaciaId)?.nombre}` : ''}
+          {farmaciaId ? (
+            <>
+              {' '}
+              <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                · Sucursal: {farmacias.find((f) => f.id === farmaciaId)?.nombre}
+              </span>
+            </>
+          ) : null}
           {aseguradora ? ` · Aseguradora: ${aseguradora}` : ''}
         </p>
       </div>

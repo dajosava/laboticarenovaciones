@@ -129,65 +129,79 @@ export const pacientes = [
   },
 ]
 
+// ─── Medicamentos (catálogo mock, formato MED- + descripción) ───
+export const medicamentos = [
+  { id: 'm001', codigo: 'MED-MOCK-001', descripcion: 'Losartán 50mg', nombre: 'Losartán 50mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm002', codigo: 'MED-MOCK-002', descripcion: 'Amlodipino 5mg', nombre: 'Amlodipino 5mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm003', codigo: 'MED-MOCK-003', descripcion: 'Omeprazol 20mg', nombre: 'Omeprazol 20mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm004', codigo: 'MED-MOCK-004', descripcion: 'Metformina 850mg', nombre: 'Metformina 850mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm005', codigo: 'MED-MOCK-005', descripcion: 'Glibenclamida 5mg', nombre: 'Glibenclamida 5mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm006', codigo: 'MED-MOCK-006', descripcion: 'Atorvastatina 20mg', nombre: 'Atorvastatina 20mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm007', codigo: 'MED-MOCK-007', descripcion: 'Levotiroxina 100mcg', nombre: 'Levotiroxina 100mcg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm008', codigo: 'MED-MOCK-008', descripcion: 'Captopril 25mg', nombre: 'Captopril 25mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm009', codigo: 'MED-MOCK-009', descripcion: 'Fluoxetina 20mg', nombre: 'Fluoxetina 20mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+  { id: 'm010', codigo: 'MED-MOCK-010', descripcion: 'Ciprofloxacino 500mg', nombre: 'Ciprofloxacino 500mg', marca: null, concentracion: null, activo: true, creado_en: '2024-01-01T00:00:00Z', actualizado_en: '2024-01-01T00:00:00Z' },
+]
+
 // ─── Tratamientos ───────────────────────────────
 // Fechas relativas a hoy para que el dashboard siempre muestre datos relevantes
 export const tratamientos = [
   {
-    id: 't001', paciente_id: 'p001', medicamento: 'Losartán 50mg', dosis_diaria: 1, unidades_caja: 30,
+    id: 't001', paciente_id: 'p001', medicamento_id: 'm001', medicamento: 'Losartán 50mg', dosis_diaria: 1, unidades_caja: 30,
     fecha_surtido: daysFromNow(-29), fecha_vencimiento: daysFromNow(1),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-001', creado_en: isoDaysAgo(29),
     paciente: { nombre: 'María Elena Hernández', telefono: '5512345001', farmacia_id: 'f001' },
   },
   {
-    id: 't002', paciente_id: 'p001', medicamento: 'Amlodipino 5mg', dosis_diaria: 1, unidades_caja: 30,
+    id: 't002', paciente_id: 'p001', medicamento_id: 'm002', medicamento: 'Amlodipino 5mg', dosis_diaria: 1, unidades_caja: 30,
     fecha_surtido: daysFromNow(-23), fecha_vencimiento: daysFromNow(7),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-001', creado_en: isoDaysAgo(23),
     paciente: { nombre: 'María Elena Hernández', telefono: '5512345001', farmacia_id: 'f001' },
   },
   {
-    id: 't003', paciente_id: 'p002', medicamento: 'Omeprazol 20mg', dosis_diaria: 1, unidades_caja: 14,
+    id: 't003', paciente_id: 'p002', medicamento_id: 'm003', medicamento: 'Omeprazol 20mg', dosis_diaria: 1, unidades_caja: 14,
     fecha_surtido: daysFromNow(-11), fecha_vencimiento: daysFromNow(3),
     tipo: 'temporal', activo: true, notas: 'Tratamiento por 14 días', registrado_por: 'mock-user-001', creado_en: isoDaysAgo(11),
     paciente: { nombre: 'José Luis Martínez', telefono: '5512345002', farmacia_id: 'f001' },
   },
   {
-    id: 't004', paciente_id: 'p003', medicamento: 'Metformina 850mg', dosis_diaria: 2, unidades_caja: 60,
+    id: 't004', paciente_id: 'p003', medicamento_id: 'm004', medicamento: 'Metformina 850mg', dosis_diaria: 2, unidades_caja: 60,
     fecha_surtido: daysFromNow(-25), fecha_vencimiento: daysFromNow(5),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-002', creado_en: isoDaysAgo(25),
     paciente: { nombre: 'Carmen Ruiz Sánchez', telefono: '5512345003', farmacia_id: 'f001' },
   },
   {
-    id: 't005', paciente_id: 'p003', medicamento: 'Glibenclamida 5mg', dosis_diaria: 1, unidades_caja: 30,
+    id: 't005', paciente_id: 'p003', medicamento_id: 'm005', medicamento: 'Glibenclamida 5mg', dosis_diaria: 1, unidades_caja: 30,
     fecha_surtido: daysFromNow(-18), fecha_vencimiento: daysFromNow(12),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-002', creado_en: isoDaysAgo(18),
     paciente: { nombre: 'Carmen Ruiz Sánchez', telefono: '5512345003', farmacia_id: 'f001' },
   },
   {
-    id: 't006', paciente_id: 'p004', medicamento: 'Atorvastatina 20mg', dosis_diaria: 1, unidades_caja: 30,
+    id: 't006', paciente_id: 'p004', medicamento_id: 'm006', medicamento: 'Atorvastatina 20mg', dosis_diaria: 1, unidades_caja: 30,
     fecha_surtido: daysFromNow(-28), fecha_vencimiento: daysFromNow(2),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-003', creado_en: isoDaysAgo(28),
     paciente: { nombre: 'Ricardo Torres Díaz', telefono: '5512345004', farmacia_id: 'f002' },
   },
   {
-    id: 't007', paciente_id: 'p005', medicamento: 'Levotiroxina 100mcg', dosis_diaria: 1, unidades_caja: 30,
+    id: 't007', paciente_id: 'p005', medicamento_id: 'm007', medicamento: 'Levotiroxina 100mcg', dosis_diaria: 1, unidades_caja: 30,
     fecha_surtido: daysFromNow(-20), fecha_vencimiento: daysFromNow(10),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-003', creado_en: isoDaysAgo(20),
     paciente: { nombre: 'Laura Patricia Gómez', telefono: '5512345005', farmacia_id: 'f002' },
   },
   {
-    id: 't008', paciente_id: 'p006', medicamento: 'Captopril 25mg', dosis_diaria: 2, unidades_caja: 60,
+    id: 't008', paciente_id: 'p006', medicamento_id: 'm008', medicamento: 'Captopril 25mg', dosis_diaria: 2, unidades_caja: 60,
     fecha_surtido: daysFromNow(-29), fecha_vencimiento: daysFromNow(1),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-001', creado_en: isoDaysAgo(29),
     paciente: { nombre: 'Miguel Ángel Flores', telefono: '5512345006', farmacia_id: 'f001' },
   },
   {
-    id: 't009', paciente_id: 'p007', medicamento: 'Fluoxetina 20mg', dosis_diaria: 1, unidades_caja: 28,
+    id: 't009', paciente_id: 'p007', medicamento_id: 'm009', medicamento: 'Fluoxetina 20mg', dosis_diaria: 1, unidades_caja: 28,
     fecha_surtido: daysFromNow(-14), fecha_vencimiento: daysFromNow(14),
     tipo: 'cronico', activo: true, notas: null, registrado_por: 'mock-user-003', creado_en: isoDaysAgo(14),
     paciente: { nombre: 'Sofía Ramírez López', telefono: '5512345007', farmacia_id: 'f002' },
   },
   {
-    id: 't010', paciente_id: 'p008', medicamento: 'Ciprofloxacino 500mg', dosis_diaria: 2, unidades_caja: 14,
+    id: 't010', paciente_id: 'p008', medicamento_id: 'm010', medicamento: 'Ciprofloxacino 500mg', dosis_diaria: 2, unidades_caja: 14,
     fecha_surtido: daysFromNow(-5), fecha_vencimiento: daysFromNow(2),
     tipo: 'temporal', activo: true, notas: 'Tratamiento de 7 días', registrado_por: 'mock-user-002', creado_en: isoDaysAgo(5),
     paciente: { nombre: 'Fernando Castro Vega', telefono: '5512345008', farmacia_id: 'f001' },
@@ -221,6 +235,7 @@ export const mockTables: Record<string, any[]> = {
   farmacias,
   empleados,
   pacientes,
+  medicamentos,
   tratamientos,
   renovaciones,
 }

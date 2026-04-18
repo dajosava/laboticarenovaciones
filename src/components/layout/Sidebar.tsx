@@ -10,11 +10,13 @@ import {
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  Package,
   Pill,
   RefreshCw,
   Settings,
   Stethoscope,
   User,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -82,6 +84,12 @@ const menuGroups: NavGroup[] = [
     title: 'Gestión',
     items: [
       { href: '/admin/farmacias', label: 'Sucursales', icon: Building2, roles: ['super_admin'] },
+      {
+        href: '/admin/medicamentos',
+        label: 'Medicamentos',
+        icon: Package,
+        roles: ['super_admin', 'admin_sucursal'],
+      },
       { href: '/admin/reportes', label: 'Reportes', icon: BarChart3, roles: ['super_admin'] },
     ],
   },
@@ -292,6 +300,21 @@ export default function Sidebar({ empleado, farmaciasFiltro = [], farmaciaFiltro
           </p>
         </div>
       )}
+
+      {/* Alta rápida de paciente (mismos roles que el listado de pacientes) */}
+      <div className={cn('border-b border-slate-800/80 px-3 py-2.5', collapsed && 'px-2')}>
+        <Link
+          href="/pacientes/nuevo"
+          title={collapsed ? 'Nuevo paciente' : undefined}
+          className={cn(
+            'flex items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-white/10 transition hover:bg-brand-500 active:scale-[0.99]',
+            collapsed ? 'min-h-[2.75rem] w-full px-0' : 'px-3',
+          )}
+        >
+          <UserPlus className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+          {!collapsed ? <span className="truncate">Nuevo paciente</span> : null}
+        </Link>
+      </div>
 
       {/* Navegación agrupada */}
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto overflow-x-hidden p-3" aria-label="Principal">

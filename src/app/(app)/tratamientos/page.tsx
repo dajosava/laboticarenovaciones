@@ -56,7 +56,7 @@ export default async function TratamientosPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Tratamientos activos</h1>
         {empleado?.rol === 'super_admin' && nombreFiltroSucursal ? (
-          <p className="mt-1 text-sm font-medium text-brand-700 dark:text-brand-400">
+          <p className="mt-1 text-sm font-medium text-emerald-800 dark:text-emerald-300">
             Sucursal seleccionada: {nombreFiltroSucursal}
           </p>
         ) : null}
