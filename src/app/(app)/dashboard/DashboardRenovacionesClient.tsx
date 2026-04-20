@@ -5,7 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowUpDown, BarChart3, CheckSquare, Download, History, Search, Square } from 'lucide-react'
 import { toast } from 'sonner'
-import { compararFilasPanelRenovacionPorPrioridad, formatoMedicamento } from '@/lib/utils'
+import {
+  compararFilasPanelRenovacionPorPrioridad,
+  formatMontoFacturaCrc,
+  formatoMedicamento,
+} from '@/lib/utils'
 import { marcarContactadosMasivo, getTimelinePreview, type TimelinePreview } from './actions'
 import BotonContactadoRenovacion from './BotonContactadoRenovacion'
 
@@ -118,6 +122,11 @@ function TimelineModal({
                       {r.numero_factura?.trim() ? (
                         <p className="mt-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                           Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
+                        </p>
+                      ) : null}
+                      {r.monto_total_factura != null && Number.isFinite(Number(r.monto_total_factura)) ? (
+                        <p className="mt-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          Monto total: {formatMontoFacturaCrc(Number(r.monto_total_factura))}
                         </p>
                       ) : null}
                       {r.notas ? <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}

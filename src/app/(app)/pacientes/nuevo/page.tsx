@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { calcularFechaVencimiento } from '@/lib/utils'
+import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Farmacia } from '@/types'
 import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
@@ -44,6 +44,7 @@ export default function NuevoPacientePage() {
     nombre: '', telefono: '', email: '', farmacia_id: '', notas: '',
     direccion: '', empresa: '', seguro_medico: '', tipo_pago: '' as '' | 'directo' | 'reembolso',
   })
+  const hoyIso = new Date().toISOString().split('T')[0]
   const [tratamiento, setTratamiento] = useState({
     medicamentoId: '',
     medicamento: '',
@@ -51,10 +52,12 @@ export default function NuevoPacientePage() {
     concentracion: '',
     dosis_diaria: '',
     unidades_caja: '',
-    fecha_surtido: new Date().toISOString().split('T')[0],
+    fecha_surtido: hoyIso,
+    fecha_inicio_tratamiento: '',
     tipo: 'cronico',
     notas: '',
     numero_factura: '',
+    monto_total_factura: '',
   })
 
   useEffect(() => {
@@ -94,9 +97,14 @@ export default function NuevoPacientePage() {
     }
   }
 
-  const fechaVencimientoPreview = tratamiento.dosis_diaria && tratamiento.unidades_caja && tratamiento.fecha_surtido
-    ? calcularFechaVencimiento(tratamiento.fecha_surtido, Number(tratamiento.unidades_caja), Number(tratamiento.dosis_diaria))
-    : null
+  const fechaVencimientoPreview =
+    tratamiento.dosis_diaria && tratamiento.unidades_caja && tratamiento.fecha_inicio_tratamiento
+      ? calcularFechaVencimiento(
+          tratamiento.fecha_inicio_tratamiento,
+          Number(tratamiento.unidades_caja),
+          Number(tratamiento.dosis_diaria),
+        )
+      : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -104,6 +112,32 @@ export default function NuevoPacientePage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
+
+      const conMedicamento = !!tratamiento.medicamentoId.trim()
+      if (conMedicamento) {
+        if (!tratamiento.fecha_inicio_tratamiento.trim()) {
+          toast.error('Indica la fecha de inicio de tratamiento (obligatoria).')
+          return
+        }
+        if (!fechaVencimientoPreview) {
+          toast.error(
+            'Para registrar el medicamento, completa dosis diarias, unidades en la caja, fecha de despacho e inicio de tratamiento.',
+          )
+          return
+        }
+        if (!tratamiento.numero_factura?.trim()) {
+          toast.error('El número de factura es obligatorio.')
+          return
+        }
+        if (!tratamiento.monto_total_factura.trim()) {
+          toast.error('El monto total de la factura es obligatorio.')
+          return
+        }
+        if (parseMontoFacturaInput(tratamiento.monto_total_factura) === null) {
+          toast.error('El monto total de la factura no es válido.')
+          return
+        }
+      }
 
       // 1. Crear paciente
       const payload = {
@@ -139,6 +173,7 @@ export default function NuevoPacientePage() {
             dosis_diaria: Number(tratamiento.dosis_diaria),
             unidades_caja: Number(tratamiento.unidades_caja),
             fecha_surtido: tratamiento.fecha_surtido,
+            fecha_inicio_tratamiento: tratamiento.fecha_inicio_tratamiento,
             fecha_vencimiento: fechaVencimientoPreview,
             tipo: tratamiento.tipo,
             notas: tratamiento.notas || null,
@@ -149,30 +184,36 @@ export default function NuevoPacientePage() {
 
         if (errTrat) throw errTrat
 
-        const factura = tratamiento.numero_factura?.trim()
-        if (factura) {
-          const { data: emp } = await supabase.from('empleados').select('farmacia_id').eq('id', user!.id).single()
-          const farmaciaId = emp?.farmacia_id ?? nuevoPaciente.farmacia_id
-          if (!farmaciaId) {
-            await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
-            await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
-            throw new Error('No se pudo determinar la farmacia para guardar el número de factura')
-          }
-          const { error: errRen } = await supabase.from('renovaciones').insert({
-            tratamiento_id: nuevoTrat.id,
-            farmacia_id: farmaciaId,
-            empleado_id: user!.id,
-            fecha: tratamiento.fecha_surtido,
-            notas: null,
-            numero_factura: factura,
-            hubo_regalia: false,
-            unidades_regalia: null,
-          })
-          if (errRen) {
-            await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
-            await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
-            throw errRen
-          }
+        const factura = tratamiento.numero_factura.trim()
+        const montoIns = parseMontoFacturaInput(tratamiento.monto_total_factura)
+        if (montoIns === null) {
+          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+          throw new Error('Monto de factura inválido')
+        }
+        const { data: emp } = await supabase.from('empleados').select('farmacia_id').eq('id', user!.id).single()
+        const farmaciaId = emp?.farmacia_id ?? nuevoPaciente.farmacia_id
+        if (!farmaciaId) {
+          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+          throw new Error('No se pudo determinar la farmacia para guardar datos de factura')
+        }
+        const { error: errRen } = await supabase.from('renovaciones').insert({
+          tratamiento_id: nuevoTrat.id,
+          farmacia_id: farmaciaId,
+          empleado_id: user!.id,
+          fecha: tratamiento.fecha_surtido,
+          fecha_inicio_tratamiento: tratamiento.fecha_inicio_tratamiento,
+          notas: null,
+          numero_factura: factura,
+          monto_total_factura: montoIns,
+          hubo_regalia: false,
+          unidades_regalia: null,
+        })
+        if (errRen) {
+          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
+          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+          throw errRen
         }
       }
 
@@ -324,9 +365,26 @@ export default function NuevoPacientePage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="1" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de surtido</label>
-              <input type="date" value={tratamiento.fecha_surtido} onChange={e => setTratamiento(t => ({ ...t, fecha_surtido: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de despacho (farmacia)</label>
+              <input
+                type="date"
+                value={tratamiento.fecha_surtido}
+                onChange={(e) => setTratamiento((t) => ({ ...t, fecha_surtido: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">Fecha en que se despacha el medicamento en la farmacia.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Inicio de tratamiento (toma) *</label>
+              <input
+                type="date"
+                value={tratamiento.fecha_inicio_tratamiento}
+                onChange={(e) => setTratamiento((t) => ({ ...t, fecha_inicio_tratamiento: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Obligatoria si registras un medicamento: debe ser indicada por el personal; no se precarga.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de tratamiento</label>
@@ -336,19 +394,37 @@ export default function NuevoPacientePage() {
                 <option value="temporal">Temporal (con fecha fin)</option>
               </select>
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de factura <span className="font-normal text-gray-500">(opcional)</span>
-              </label>
-              <input
-                type="text"
-                value={tratamiento.numero_factura}
-                onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Según inventario / POS de la farmacia"
-                autoComplete="off"
-              />
-              <p className="mt-1 text-xs text-gray-500">Para enlazar el surtido inicial con la factura de su sistema.</p>
+            <div className="col-span-2 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de factura <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={tratamiento.numero_factura}
+                  onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Según inventario / POS de la farmacia"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Monto total factura (CRC) <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={tratamiento.monto_total_factura}
+                  onChange={(e) => setTratamiento((t) => ({ ...t, monto_total_factura: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ej: 12500 o 12500,50"
+                  autoComplete="off"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-gray-500">
+                Obligatorios si registras un medicamento: se guarda el despacho en historial.
+              </p>
             </div>
 
             {/* Preview fecha de vencimiento */}
@@ -358,7 +434,7 @@ export default function NuevoPacientePage() {
                   ✅ Fecha de vencimiento calculada: <strong>{fechaVencimientoPreview}</strong>
                 </p>
                 <p className="text-green-600 text-xs mt-1">
-                  El dashboard mostrará este tratamiento y su vencimiento para que puedas dar seguimiento.
+                  El vencimiento cuenta desde la fecha de inicio de tratamiento. El dashboard usará esta fecha para el seguimiento.
                 </p>
               </div>
             )}

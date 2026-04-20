@@ -60,7 +60,10 @@ export interface Tratamiento {
   concentracion?: string | null
   dosis_diaria: number
   unidades_caja: number
+  /** Despacho en farmacia / facturación (columna `fecha_surtido`). */
   fecha_surtido: string
+  /** Inicio real de la toma por el paciente (base del cálculo de vencimiento). */
+  fecha_inicio_tratamiento: string
   fecha_vencimiento: string
   tipo: TipoTratamiento
   activo: boolean
@@ -78,10 +81,14 @@ export interface Renovacion {
   tratamiento_id: string
   farmacia_id: string
   empleado_id: string
+  /** Fecha de despacho en farmacia (columna `fecha`). */
   fecha: string
+  fecha_inicio_tratamiento: string
   notas: string | null
-  /** Factura / POS: surtido inicial o renovación (opcional). */
+  /** Factura / POS; obligatorio en registros nuevos (puede ser null en datos antiguos). */
   numero_factura?: string | null
+  /** Monto total CRC; obligatorio en registros nuevos (puede ser null en datos antiguos). */
+  monto_total_factura?: number | null
   creada_en: string
   hubo_regalia?: boolean
   unidades_regalia?: number | null
@@ -128,6 +135,7 @@ export interface FormTratamiento {
   dosis_diaria: number
   unidades_caja: number
   fecha_surtido: string
+  fecha_inicio_tratamiento: string
   tipo: TipoTratamiento
   notas?: string
 }

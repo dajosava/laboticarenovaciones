@@ -42,6 +42,7 @@ export type TimelinePreview = {
     fecha: string
     notas: string | null
     numero_factura?: string | null
+    monto_total_factura?: number | string | null
     farmacia?: { nombre: string } | null
     empleado?: { nombre: string } | null
   }[]
@@ -78,7 +79,7 @@ export async function getTimelinePreview(pacienteId: string): Promise<{ data?: T
     tids.length > 0
       ? await supabase
           .from('renovaciones')
-          .select('id, fecha, notas, numero_factura, farmacia:farmacias(nombre), empleado:empleados(nombre)')
+          .select('id, fecha, notas, numero_factura, monto_total_factura, farmacia:farmacias(nombre), empleado:empleados(nombre)')
           .in('tratamiento_id', tids)
           .order('fecha', { ascending: false })
           .limit(15)

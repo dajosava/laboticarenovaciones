@@ -12,6 +12,7 @@ import {
   startOfDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { formatearFechaCorta, formatMontoFacturaCrc } from '@/lib/utils'
 import { ClipboardList, Eye, Filter, Search, User } from 'lucide-react'
 
 export type SeveridadEvento = 'normal' | 'tardio' | 'critico'
@@ -20,8 +21,10 @@ export type RenovacionAuditItem = {
   id: string
   tratamiento_id: string
   fecha: string
+  fecha_inicio_tratamiento: string
   notas: string | null
   numero_factura: string | null
+  monto_total_factura: number | null
   farmaciaNombre: string
   empleadoNombre: string
   pacienteId: string | null
@@ -331,6 +334,11 @@ export default function RenovacionesAuditCliente({
                               <span className="mx-1.5 text-slate-400">·</span>
                               <span className="text-slate-700 dark:text-slate-300">{item.medicamentoLabel}</span>
                             </p>
+                            {item.fecha_inicio_tratamiento !== item.fecha ? (
+                              <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                Despacho {formatearFechaCorta(item.fecha)} · Inicio de toma {formatearFechaCorta(item.fecha_inicio_tratamiento)}
+                              </p>
+                            ) : null}
                             <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-500">
                               {item.diasDesdeRenovacionAnterior !== null ? (
                                 <>
@@ -348,6 +356,14 @@ export default function RenovacionesAuditCliente({
                                 Factura:{' '}
                                 <span className="font-mono font-normal text-slate-800 dark:text-slate-200">
                                   {item.numero_factura.trim()}
+                                </span>
+                              </p>
+                            ) : null}
+                            {item.monto_total_factura != null ? (
+                              <p className="mt-1 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                                Monto total:{' '}
+                                <span className="tabular-nums text-slate-800 dark:text-slate-200">
+                                  {formatMontoFacturaCrc(item.monto_total_factura)}
                                 </span>
                               </p>
                             ) : null}

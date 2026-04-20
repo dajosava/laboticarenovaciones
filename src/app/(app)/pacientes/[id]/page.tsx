@@ -5,6 +5,7 @@ import {
   clasesColorBadgeKpiPanelRenovaciones,
   cn,
   formatearFechaCorta,
+  formatMontoFacturaCrc,
   formatoMedicamento,
 } from '@/lib/utils'
 import type { Renovacion, Tratamiento } from '@/types'
@@ -310,8 +311,12 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
 
                           <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-400 sm:grid-cols-2">
                             <p>
-                              <span className="font-medium text-slate-500 dark:text-slate-400">Último surtido:</span>{' '}
+                              <span className="font-medium text-slate-500 dark:text-slate-400">Último despacho:</span>{' '}
                               {formatearFechaCorta(t.fecha_surtido)}
+                            </p>
+                            <p>
+                              <span className="font-medium text-slate-500 dark:text-slate-400">Inicio de toma:</span>{' '}
+                              {formatearFechaCorta(t.fecha_inicio_tratamiento ?? t.fecha_surtido)}
                             </p>
                             <p>
                               <span className="font-medium text-slate-500 dark:text-slate-400">Vence:</span>{' '}
@@ -392,7 +397,14 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                           >
                             {tardia ? <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />}
                           </span>
-                          <time className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{formatearFechaCorta(r.fecha)}</time>
+                          <time className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {formatearFechaCorta(r.fecha)}
+                            {(r.fecha_inicio_tratamiento ?? r.fecha) !== r.fecha ? (
+                              <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                                Inicio de toma: {formatearFechaCorta(r.fecha_inicio_tratamiento ?? r.fecha)}
+                              </span>
+                            ) : null}
+                          </time>
                           <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                             {tardia ? 'Renovación tardía' : 'Renovación realizada'}
                             {tardia && diasDiff > 0 ? (
@@ -411,6 +423,11 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                           {r.numero_factura?.trim() ? (
                             <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
                               Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
+                            </p>
+                          ) : null}
+                          {r.monto_total_factura != null && Number.isFinite(Number(r.monto_total_factura)) ? (
+                            <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                              Monto total: {formatMontoFacturaCrc(Number(r.monto_total_factura))}
                             </p>
                           ) : null}
                           {r.notas ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}

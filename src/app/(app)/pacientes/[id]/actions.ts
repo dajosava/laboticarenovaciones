@@ -2,7 +2,17 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { calcularFechaVencimiento } from '@/lib/utils'
+import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
+
+function montoObligatorioDesdeDatos(v: unknown): number | null {
+  if (v == null || v === '') return null
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v) || v < 0) return null
+    return Math.round(v * 100) / 100
+  }
+  if (typeof v === 'string') return parseMontoFacturaInput(v)
+  return null
+}
 
 export async function eliminarPaciente(pacienteId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -41,11 +51,15 @@ export async function actualizarNotasPaciente(pacienteId: string, notas: string)
 
 export type DatosRenovacion = {
   fecha_surtido: string
+  /** Inicio de toma con este despacho (obligatoria en renovaciones). */
+  fecha_inicio_tratamiento: string
   unidades_caja: number
   dosis_diaria: number
   notas?: string | null
-  /** Número de factura del inventario de la farmacia (opcional). */
-  numero_factura?: string | null
+  /** Número de factura (obligatorio al registrar la renovación). */
+  numero_factura: string
+  /** Monto total del comprobante en CRC (obligatorio al registrar la renovación). */
+  monto_total_factura: number
   medicamento_id?: string | null
   medicamento?: string
   marca?: string | null
@@ -87,14 +101,29 @@ export async function registrarRenovacion(
       : 0
   const unidadesParaVencimiento = datos.unidades_caja + extraRegalia
 
+  const fechaInicioToma = datos.fecha_inicio_tratamiento.trim()
+  if (!fechaInicioToma) {
+    return { error: 'La fecha de inicio de tratamiento es obligatoria.' }
+  }
+
+  const numeroFactura = datos.numero_factura.trim()
+  if (!numeroFactura) {
+    return { error: 'El número de factura es obligatorio.' }
+  }
+  const montoFactura = montoObligatorioDesdeDatos(datos.monto_total_factura)
+  if (montoFactura === null) {
+    return { error: 'El monto total de la factura es obligatorio o no es válido.' }
+  }
+
   const fechaVencimiento = calcularFechaVencimiento(
-    datos.fecha_surtido,
+    fechaInicioToma,
     unidadesParaVencimiento,
     datos.dosis_diaria
   )
 
   const updatePayload: Record<string, unknown> = {
     fecha_surtido: datos.fecha_surtido,
+    fecha_inicio_tratamiento: fechaInicioToma,
     fecha_vencimiento: fechaVencimiento,
     unidades_caja: datos.unidades_caja,
     dosis_diaria: datos.dosis_diaria,
@@ -117,8 +146,10 @@ export async function registrarRenovacion(
         farmacia_id: farmaciaId,
         empleado_id: user.id,
         fecha: datos.fecha_surtido,
+        fecha_inicio_tratamiento: fechaInicioToma,
         notas: datos.notas?.trim() || null,
-        numero_factura: datos.numero_factura?.trim() || null,
+        numero_factura: numeroFactura,
+        monto_total_factura: montoFactura,
         hubo_regalia: huboRegalia,
         unidades_regalia: huboRegalia ? extraRegalia : null,
       })

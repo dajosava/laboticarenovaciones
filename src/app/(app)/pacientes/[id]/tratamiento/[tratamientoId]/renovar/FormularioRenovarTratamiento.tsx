@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { calcularFechaVencimiento } from '@/lib/utils'
+import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
 import { toast } from 'sonner'
 import { registrarRenovacion } from '../../../actions'
 import type { Tratamiento } from '@/types'
@@ -31,9 +31,11 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
     dosis_diaria: String(tratamiento.dosis_diaria),
     unidades_caja: String(tratamiento.unidades_caja),
     fecha_surtido: hoy,
+    fecha_inicio_tratamiento: '',
     tipo: tratamiento.tipo,
     notas: '',
     numero_factura: '',
+    monto_total_factura: '',
     hubo_regalia: false,
     unidades_regalia: '',
   })
@@ -42,8 +44,11 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
   const unidadesParaVencimiento = Number(form.unidades_caja) + unidadesRegaliaNum
 
   const fechaVencimientoPreview =
-    form.dosis_diaria && form.unidades_caja && form.fecha_surtido && (!form.hubo_regalia || unidadesRegaliaNum > 0)
-      ? calcularFechaVencimiento(form.fecha_surtido, unidadesParaVencimiento, Number(form.dosis_diaria))
+    form.dosis_diaria &&
+    form.unidades_caja &&
+    form.fecha_inicio_tratamiento &&
+    (!form.hubo_regalia || unidadesRegaliaNum > 0)
+      ? calcularFechaVencimiento(form.fecha_inicio_tratamiento, unidadesParaVencimiento, Number(form.dosis_diaria))
       : null
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,22 +57,42 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
       toast.error('Selecciona un medicamento del catálogo')
       return
     }
+    if (!form.fecha_inicio_tratamiento.trim()) {
+      toast.error('Indica la fecha de inicio de tratamiento (obligatoria).')
+      return
+    }
     if (!fechaVencimientoPreview) {
       toast.error(
         form.hubo_regalia && unidadesRegaliaNum < 1
           ? 'Indica cuántas unidades de regalía (mayor a 0).'
-          : 'Revisa unidades, dosis y fecha de surtido.',
+          : 'Revisa unidades, dosis y fecha de inicio de tratamiento.',
       )
+      return
+    }
+    if (!form.numero_factura.trim()) {
+      toast.error('El número de factura es obligatorio.')
+      return
+    }
+    const montoStr = form.monto_total_factura.trim()
+    if (!montoStr) {
+      toast.error('El monto total de la factura es obligatorio.')
+      return
+    }
+    const montoTotalFactura = parseMontoFacturaInput(form.monto_total_factura)
+    if (montoTotalFactura === null) {
+      toast.error('El monto total de la factura no es válido.')
       return
     }
     setLoading(true)
     try {
       const { error } = await registrarRenovacion(tratamiento.id, pacienteId, {
         fecha_surtido: form.fecha_surtido,
+        fecha_inicio_tratamiento: form.fecha_inicio_tratamiento,
         unidades_caja: Number(form.unidades_caja),
         dosis_diaria: Number(form.dosis_diaria),
         notas: form.notas.trim() || null,
-        numero_factura: form.numero_factura.trim() || null,
+        numero_factura: form.numero_factura.trim(),
+        monto_total_factura: montoTotalFactura,
         medicamento_id: form.medicamentoId.trim(),
         medicamento: form.medicamento.trim(),
         marca: form.marca.trim() || null,
@@ -178,7 +203,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Fecha de surtido (renovación) *</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Fecha de despacho (farmacia) *</label>
               <input
                 type="date"
                 required
@@ -186,6 +211,20 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                 onChange={(e) => setForm((f) => ({ ...f, fecha_surtido: e.target.value }))}
                 className={inputClass}
               />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Fecha en que se despacha el medicamento en la farmacia.</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Inicio de tratamiento (toma) *</label>
+              <input
+                type="date"
+                required
+                value={form.fecha_inicio_tratamiento}
+                onChange={(e) => setForm((f) => ({ ...f, fecha_inicio_tratamiento: e.target.value }))}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Obligatoria: indícala según cuándo el paciente iniciará la toma con este despacho. No se precarga.
+              </p>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de tratamiento</label>
@@ -218,7 +257,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                     Hubo regalía por compra en esta renovación
                   </span>
                   <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
-                    Las unidades extra alargan la fecha de vencimiento respecto a solo la caja surtida.
+                    Las unidades extra alargan la fecha de vencimiento respecto a solo la caja despachada.
                   </span>
                 </span>
               </label>
@@ -243,20 +282,38 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
               ) : null}
             </div>
 
-            <div className="col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Número de factura <span className="font-normal text-slate-500 dark:text-slate-400">(opcional)</span>
-              </label>
-              <input
-                type="text"
-                value={form.numero_factura}
-                onChange={(e) => setForm((f) => ({ ...f, numero_factura: e.target.value }))}
-                className={inputClass}
-                placeholder="Ej: según su sistema de inventario / POS"
-                autoComplete="off"
-              />
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Para enlazar esta renovación con la factura o ticket de su farmacia; no se valida contra sistemas externos.
+            <div className="col-span-2 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Número de factura <span className="text-red-600 dark:text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.numero_factura}
+                  onChange={(e) => setForm((f) => ({ ...f, numero_factura: e.target.value }))}
+                  className={inputClass}
+                  placeholder="Ej: según su sistema de inventario / POS"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Monto total factura (CRC) <span className="text-red-600 dark:text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  inputMode="decimal"
+                  value={form.monto_total_factura}
+                  onChange={(e) => setForm((f) => ({ ...f, monto_total_factura: e.target.value }))}
+                  className={inputClass}
+                  placeholder="Ej: 12500 o 12500,50"
+                  autoComplete="off"
+                />
+              </div>
+              <p className="col-span-2 mt-0 text-xs text-slate-500 dark:text-slate-400">
+                Ambos datos son obligatorios para registrar la renovación; no se validan contra sistemas externos.
               </p>
             </div>
 
@@ -284,7 +341,8 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                   {form.hubo_regalia && unidadesRegaliaNum > 0
                     ? `Incluye ${unidadesRegaliaNum} unidad${unidadesRegaliaNum !== 1 ? 'es' : ''} de regalía además de la caja. `
                     : null}
-                  Al guardar se actualizará el tratamiento y quedará registrada la renovación.
+                  El vencimiento cuenta desde la fecha de inicio de tratamiento. Al guardar se actualizará el tratamiento y quedará
+                  registrada la renovación.
                 </p>
               </div>
             )}

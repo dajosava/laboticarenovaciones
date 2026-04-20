@@ -9,12 +9,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ─── Cálculo de fecha de vencimiento ─────────
+/** Duración en días = unidadesCaja / dosisDiaria; el vencimiento cuenta desde la fecha de inicio de toma. */
 export function calcularFechaVencimiento(
-  fechaSurtido: string,
+  fechaInicioToma: string,
   unidadesCaja: number,
   dosisDiaria: number
 ): string {
-  const inicio = parseISO(fechaSurtido)
+  const inicio = parseISO(fechaInicioToma)
   const diasDuracion = Math.floor(unidadesCaja / dosisDiaria)
   const fechaVencimiento = addDays(inicio, diasDuracion)
   return format(fechaVencimiento, 'yyyy-MM-dd')
@@ -131,6 +132,25 @@ export function formatearFecha(fecha: string): string {
 
 export function formatearFechaCorta(fecha: string): string {
   return format(parseISO(fecha), 'dd/MM/yyyy')
+}
+
+/** Entrada del usuario (coma o punto decimal). `null` si vacío o no válido. */
+export function parseMontoFacturaInput(raw: string): number | null {
+  const t = raw.trim().replace(/\s/g, '').replace(',', '.')
+  if (!t) return null
+  const n = Number(t)
+  if (!Number.isFinite(n) || n < 0) return null
+  return Math.round(n * 100) / 100
+}
+
+/** Formato en colones (CRC) para mostrar montos de factura. */
+export function formatMontoFacturaCrc(monto: number): string {
+  return new Intl.NumberFormat('es-CR', {
+    style: 'currency',
+    currency: 'CRC',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(monto)
 }
 
 // ─── Medicamento con marca y concentración ───

@@ -12,8 +12,10 @@ type Row = {
   tratamiento_id: string
   farmacia_id: string
   fecha: string
+  fecha_inicio_tratamiento?: string
   notas: string | null
   numero_factura?: string | null
+  monto_total_factura?: number | string | null
   farmacia?: { nombre: string } | null
   empleado?: { nombre: string } | null
   tratamiento?: {
@@ -98,8 +100,13 @@ export default async function RenovacionesPage() {
       id: r.id,
       tratamiento_id: r.tratamiento_id,
       fecha: r.fecha,
+      fecha_inicio_tratamiento: r.fecha_inicio_tratamiento ?? r.fecha,
       notas: r.notas,
       numero_factura: r.numero_factura ?? null,
+      monto_total_factura:
+        r.monto_total_factura != null && Number.isFinite(Number(r.monto_total_factura))
+          ? Number(r.monto_total_factura)
+          : null,
       farmaciaNombre: r.farmacia?.nombre ?? '—',
       empleadoNombre: r.empleado?.nombre ?? '—',
       pacienteId: tr?.paciente_id ?? null,
