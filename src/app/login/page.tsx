@@ -59,60 +59,44 @@ function FloatingInput(props: {
   disabled?: boolean
 }) {
   const { id, label, type, value, onChange, placeholder, autoComplete, icon: Icon, error, disabled } = props
-  const [focused, setFocused] = useState(false)
-  const hasValue = value.trim().length > 0
-  const lifted = focused || hasValue
 
   return (
     <div>
       <div
         className={cn(
-          'relative rounded-xl border bg-white transition-[box-shadow,border-color] dark:bg-slate-950/60',
+          'rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-[box-shadow,border-color] dark:bg-slate-950 dark:shadow-none',
           error
             ? 'border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
-            : 'border-slate-200 shadow-sm dark:border-slate-700 dark:shadow-none',
+            : 'border-slate-200 dark:border-slate-700',
           !error && 'focus-within:border-brand-500 focus-within:shadow-[0_0_0_4px_rgba(34,162,90,0.18)] dark:focus-within:border-brand-500',
         )}
       >
-        <Icon
-          className={cn(
-            'pointer-events-none absolute left-3.5 z-10 h-5 w-5 text-slate-400 transition-all duration-200 dark:text-slate-500',
-            lifted ? 'top-[1.125rem] -translate-y-1/2' : 'top-1/2 -translate-y-1/2',
-          )}
-          aria-hidden
-        />
-        <input
-          id={id}
-          type={type}
-          value={value}
-          disabled={disabled}
-          autoComplete={autoComplete}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={placeholder}
-          className={cn(
-            'peer relative z-[2] w-full rounded-xl bg-white pl-11 pr-3 outline-none dark:bg-slate-950',
-            'pt-5 pb-2.5 text-[15px] text-slate-900 dark:text-slate-100',
-            /* Hint nativo solo con foco y vacío; el label usa estado React (fiable en claro/oscuro) */
-            'placeholder:text-transparent focus:placeholder:text-slate-500/90 dark:focus:placeholder:text-slate-400',
-          )}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-        />
-        <label
-          htmlFor={id}
-          className={cn(
-            'pointer-events-none absolute left-11 z-[3] origin-left transition-all duration-200',
-            lifted
-              ? 'top-2 translate-y-0 text-xs font-medium text-brand-600 dark:text-brand-400'
-              : 'top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400',
-            /* Autofill sin actualizar React aún: sube el label igual */
-            'peer-[&:is(:-webkit-autofill)]:top-2 peer-[&:is(:-webkit-autofill)]:translate-y-0 peer-[&:is(:-webkit-autofill)]:text-xs peer-[&:is(:-webkit-autofill)]:font-medium peer-[&:is(:-webkit-autofill)]:text-brand-600 dark:peer-[&:is(:-webkit-autofill)]:text-brand-400',
-          )}
-        >
-          {label}
-        </label>
+        <div className="min-w-0">
+          <label
+            htmlFor={id}
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+          >
+            {label}
+          </label>
+          <div className="flex items-center gap-3">
+            <Icon className="h-5 w-5 shrink-0 text-slate-400 dark:text-slate-500" aria-hidden />
+            <input
+              id={id}
+              type={type}
+              value={value}
+              disabled={disabled}
+              autoComplete={autoComplete}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              className={cn(
+                'min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-slate-900 outline-none ring-0 dark:text-slate-100',
+                'placeholder:text-slate-400 dark:placeholder:text-slate-500',
+              )}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${id}-error` : undefined}
+            />
+          </div>
+        </div>
       </div>
       {error ? (
         <p id={`${id}-error`} className="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400" role="alert">
