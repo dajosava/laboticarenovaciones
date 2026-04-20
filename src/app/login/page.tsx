@@ -12,10 +12,12 @@ import {
   Lock,
   Mail,
   Moon,
+  Phone,
   Shield,
   Sparkles,
   Stethoscope,
   Sun,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTheme } from '@/components/layout/ThemeProvider'
@@ -24,6 +26,13 @@ import { cn } from '@/lib/utils'
 
 const LAST_LOGIN_KEY = 'farmarenovar-last-login-at'
 const REMEMBER_KEY = 'farmarenovar-remember-session'
+
+const SOPORTE_DESARROLLADOR = {
+  nombre: 'David Salazar Valverde',
+  telefono: '50670142848',
+  telefonoDisplay: '+506 7014 2848',
+  correo: 'dajosava@gmail.com',
+} as const
 
 function mapAuthError(error: AuthError | null): string {
   if (!error?.message && !error?.status) {
@@ -50,8 +59,6 @@ function FloatingInput(props: {
   disabled?: boolean
 }) {
   const { id, label, type, value, onChange, placeholder, autoComplete, icon: Icon, error, disabled } = props
-  const [focused, setFocused] = useState(false)
-  const lifted = focused || value.length > 0
 
   return (
     <div>
@@ -65,7 +72,7 @@ function FloatingInput(props: {
         )}
       >
         <Icon
-          className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+          className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500"
           aria-hidden
         />
         <input
@@ -75,13 +82,12 @@ function FloatingInput(props: {
           disabled={disabled}
           autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           placeholder={placeholder}
           className={cn(
             'peer w-full rounded-xl bg-transparent pl-11 pr-3 outline-none',
-            'pt-5 pb-2 text-[15px] text-slate-900 dark:text-slate-100',
-            'placeholder:text-transparent focus:placeholder:text-slate-400/90 dark:focus:placeholder:text-slate-500',
+            'pt-5 pb-2.5 text-[15px] text-slate-900 dark:text-slate-100',
+            /* Hint nativo solo al enfocar campo vacío; posición del label sigue :placeholder-shown y autofill */
+            'placeholder:text-transparent focus:placeholder:text-slate-400/80 dark:focus:placeholder:text-slate-500',
           )}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
@@ -89,8 +95,12 @@ function FloatingInput(props: {
         <label
           htmlFor={id}
           className={cn(
-            'pointer-events-none absolute left-11 origin-left text-slate-500 transition-all duration-200 dark:text-slate-400',
-            lifted ? 'top-2 translate-y-0 text-xs font-medium text-brand-600 dark:text-brand-500' : 'top-1/2 -translate-y-1/2 text-sm',
+            'pointer-events-none absolute left-11 z-[1] origin-left text-slate-500 transition-all duration-200 dark:text-slate-400',
+            /* Posición según el DOM (valor, autofill), no solo estado React */
+            'top-1/2 -translate-y-1/2 text-sm',
+            'peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:font-medium peer-focus:text-brand-600 dark:peer-focus:text-brand-500',
+            'peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:font-medium peer-[:not(:placeholder-shown)]:text-brand-600 dark:peer-[:not(:placeholder-shown)]:text-brand-500',
+            'peer-[&:is(:-webkit-autofill)]:top-2 peer-[&:is(:-webkit-autofill)]:translate-y-0 peer-[&:is(:-webkit-autofill)]:text-xs peer-[&:is(:-webkit-autofill)]:font-medium peer-[&:is(:-webkit-autofill)]:text-brand-600 dark:peer-[&:is(:-webkit-autofill)]:text-brand-500',
           )}
         >
           {label}
@@ -120,6 +130,7 @@ function LoginPageContent() {
   const [showForgot, setShowForgot] = useState(false)
   const [resetSending, setResetSending] = useState(false)
   const [lastLoginLabel, setLastLoginLabel] = useState<string | null>(null)
+  const [modalSoporteAbierto, setModalSoporteAbierto] = useState(false)
 
   useEffect(() => {
     const raw = typeof window !== 'undefined' ? localStorage.getItem(LAST_LOGIN_KEY) : null
@@ -204,8 +215,6 @@ function LoginPageContent() {
     setShowForgot(false)
   }
 
-  const supportHref = process.env.NEXT_PUBLIC_SOPORTE_MAILTO
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen flex-col lg:flex-row">
@@ -220,8 +229,8 @@ function LoginPageContent() {
                 <Stethoscope className="h-9 w-9 text-emerald-300" strokeWidth={1.75} aria-hidden />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/90">Salud · Operaciones</p>
-                <h1 className="text-3xl font-bold tracking-tight">FarmaRenovar</h1>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/90">Medicamentos · Renovaciones</p>
+                <h1 className="text-3xl font-bold tracking-tight">La Botica</h1>
               </div>
             </div>
 
@@ -245,7 +254,7 @@ function LoginPageContent() {
 
             <div className="mt-12 flex items-center gap-2 text-sm text-slate-400">
               <Shield className="h-4 w-4 text-emerald-400/90" aria-hidden />
-              <span>Infraestructura pensada para cumplimiento y trazabilidad clínica.</span>
+              <span>Infraestructura pensada para cumplimiento y trazabilidad.</span>
             </div>
           </div>
         </div>
@@ -275,9 +284,6 @@ function LoginPageContent() {
             <div className="mx-auto w-full max-w-md">
               <div className="mb-8 lg:mb-10">
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Iniciar sesión</h2>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Accede con tu cuenta corporativa. Los intentos están protegidos ante accesos indebidos.
-                </p>
                 {lastLoginLabel ? (
                   <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                     <Sparkles className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" aria-hidden />
@@ -385,31 +391,17 @@ function LoginPageContent() {
               </form>
 
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-100 pt-6 text-sm dark:border-slate-800">
-                {supportHref ? (
-                  <a href={supportHref} className="font-medium text-brand-700 hover:underline dark:text-brand-400">
-                    Contactar soporte
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.message('Para soporte, contacta al administrador de tu organización o al responsable de TI.')
-                    }
-                    className="font-medium text-brand-700 hover:underline dark:text-brand-400"
-                  >
-                    Contactar soporte
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setModalSoporteAbierto(true)}
+                  className="font-medium text-brand-700 underline-offset-2 hover:underline dark:text-brand-400"
+                >
+                  Contactar soporte
+                </button>
                 <span className="hidden text-slate-300 sm:inline" aria-hidden>
                   ·
                 </span>
-                <button
-                  type="button"
-                  className="text-slate-500 hover:text-slate-800 dark:text-slate-500 dark:hover:text-slate-300"
-                  onClick={() => toast.info('Próximamente: acceso con código de un solo uso (OTP).')}
-                >
-                  Entrar con código (OTP)
-                </button>
+
               </div>
 
               <p className="mt-8 flex items-center justify-center gap-2 text-center text-xs text-slate-500 dark:text-slate-500">
@@ -420,6 +412,76 @@ function LoginPageContent() {
           </div>
         </div>
       </div>
+
+      {modalSoporteAbierto ? (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/45 p-4"
+          role="presentation"
+          onClick={() => setModalSoporteAbierto(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="soporte-titulo"
+            className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setModalSoporteAbierto(false)}
+              className="absolute right-3 top-3 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              aria-label="Cerrar"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+            <h3 id="soporte-titulo" className="pr-10 text-lg font-bold text-slate-900 dark:text-white">
+              Soporte técnico
+            </h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Datos de contacto del desarrollador del sistema.
+            </p>
+            <dl className="mt-5 space-y-4 text-sm">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nombre</dt>
+                <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">{SOPORTE_DESARROLLADOR.nombre}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Teléfono</dt>
+                <dd className="mt-0.5">
+                  <a
+                    href={`tel:+${SOPORTE_DESARROLLADOR.telefono}`}
+                    className="inline-flex items-center gap-2 font-medium text-brand-700 hover:underline dark:text-brand-400"
+                  >
+                    <Phone className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                    {SOPORTE_DESARROLLADOR.telefonoDisplay}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Correo</dt>
+                <dd className="mt-0.5">
+                  <a
+                    href={`mailto:${SOPORTE_DESARROLLADOR.correo}`}
+                    className="inline-flex items-center gap-2 break-all font-medium text-brand-700 hover:underline dark:text-brand-400"
+                  >
+                    <Mail className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                    {SOPORTE_DESARROLLADOR.correo}
+                  </a>
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setModalSoporteAbierto(false)}
+                className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

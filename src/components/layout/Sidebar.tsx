@@ -215,8 +215,8 @@ export default function Sidebar({ empleado, farmaciasFiltro = [], farmaciaFiltro
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate font-bold tracking-tight text-white">FarmaRenovar</p>
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">Sistema interno</p>
+              <p className="truncate font-bold tracking-tight text-white">La Botica</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">Registro de Renovaciones</p>
             </div>
           )}
           <button
