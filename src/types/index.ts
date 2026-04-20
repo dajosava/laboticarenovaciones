@@ -23,7 +23,8 @@ export interface Empleado {
   nombre: string
   email: string
   rol: Rol
-  farmacia_id: string
+  /** null para super_admin sin sucursal fija */
+  farmacia_id: string | null
   activo: boolean
   creado_en: string
   farmacia?: Farmacia

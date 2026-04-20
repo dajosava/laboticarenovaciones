@@ -123,10 +123,11 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
           toast.error(r.error ?? 'No se pudo crear la sucursal')
           return
         }
+        const nuevoId = r.id
         setLista((prev) => [
           ...prev,
           {
-            id: r.id,
+            id: nuevoId,
             ...payload,
           },
         ])
