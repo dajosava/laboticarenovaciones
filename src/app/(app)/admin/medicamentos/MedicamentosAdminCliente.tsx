@@ -41,7 +41,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
 
   const [altaCodigo, setAltaCodigo] = useState('')
   const [altaDescripcion, setAltaDescripcion] = useState('')
-  const [altaPanelAbierto, setAltaPanelAbierto] = useState(true)
+  const [altaPanelAbierto, setAltaPanelAbierto] = useState(false)
   const [textoImportMasivo, setTextoImportMasivo] = useState('')
   const [importandoMasivo, setImportandoMasivo] = useState(false)
 

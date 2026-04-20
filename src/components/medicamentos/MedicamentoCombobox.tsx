@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { etiquetaMedicamentoCatalogo } from '@/lib/medicamentos-import'
+import { fetchMedicamentosAdminList } from '@/lib/medicamentos-admin-query'
 import { cn } from '@/lib/utils'
 import type { Rol } from '@/types'
 
@@ -42,6 +43,7 @@ export default function MedicamentoCombobox({
   const [rolDetectado, setRolDetectado] = useState<Rol | null>(rolEmpleado ?? null)
   const [q, setQ] = useState('')
   const [abierto, setAbierto] = useState(false)
+  const [seleccionadoMem, setSeleccionadoMem] = useState<MedicamentoCatalogoRow | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,29 +69,27 @@ export default function MedicamentoCombobox({
     let ok = true
     ;(async () => {
       setCargando(true)
-      const { data, error } = await supabase
-        .from('medicamentos')
-        .select('id, codigo, descripcion, nombre, marca, concentracion')
-        .eq('activo', true)
-        .order('codigo', { ascending: true })
-        .order('descripcion', { ascending: true })
+      const rows = await fetchMedicamentosAdminList(supabase, {
+        q,
+        soloActivos: true,
+      })
       if (!ok) return
-      if (error) {
-        setLista([])
-      } else {
-        setLista((data as MedicamentoCatalogoRow[]) ?? [])
-      }
+      setLista((rows ?? []).slice(0, 80))
       setCargando(false)
     })()
     return () => {
       ok = false
     }
-  }, [supabase])
+  }, [supabase, q])
 
   const seleccionado = useMemo(
-    () => lista.find((m) => m.id === medicamentoId) ?? null,
-    [lista, medicamentoId],
+    () => lista.find((m) => m.id === medicamentoId) ?? (seleccionadoMem?.id === medicamentoId ? seleccionadoMem : null),
+    [lista, medicamentoId, seleccionadoMem],
   )
+
+  useEffect(() => {
+    if (!medicamentoId) setSeleccionadoMem(null)
+  }, [medicamentoId])
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -99,22 +99,12 @@ export default function MedicamentoCombobox({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
-  const filtrados = useMemo(() => {
-    const n = q.trim().toLowerCase()
-    if (!n) return lista.slice(0, 80)
-    return lista
-      .filter((m) => {
-        const blob = etiquetaMedicamentoCatalogo(m).toLowerCase()
-        return blob.includes(n)
-      })
-      .slice(0, 80)
-  }, [lista, q])
-
   const etiquetaSeleccion = seleccionado ? etiquetaMedicamentoCatalogo(seleccionado) : ''
 
   const elegir = useCallback(
     (row: MedicamentoCatalogoRow | null) => {
       onMedicamentoChange(row)
+      setSeleccionadoMem(row)
       setQ('')
       setAbierto(false)
     },
@@ -152,7 +142,7 @@ export default function MedicamentoCombobox({
           <input
             type="search"
             autoComplete="off"
-            disabled={disabled || cargando}
+            disabled={disabled}
             placeholder={cargando ? 'Cargando catálogo…' : 'Buscar por código (MED-…) o descripción…'}
             value={abierto ? q : seleccionado ? etiquetaSeleccion : q}
             onChange={(e) => {
@@ -167,10 +157,10 @@ export default function MedicamentoCombobox({
               className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-600 dark:bg-slate-900"
               role="listbox"
             >
-              {filtrados.length === 0 ? (
+              {lista.length === 0 ? (
                 <li className="px-3 py-2 text-slate-500 dark:text-slate-400">Sin coincidencias.</li>
               ) : (
-                filtrados.map((m) => (
+                lista.map((m) => (
                   <li key={m.id} role="option">
                     <button
                       type="button"
