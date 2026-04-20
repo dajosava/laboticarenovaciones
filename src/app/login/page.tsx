@@ -59,6 +59,9 @@ function FloatingInput(props: {
   disabled?: boolean
 }) {
   const { id, label, type, value, onChange, placeholder, autoComplete, icon: Icon, error, disabled } = props
+  const [focused, setFocused] = useState(false)
+  const hasValue = value.trim().length > 0
+  const lifted = focused || hasValue
 
   return (
     <div>
@@ -72,7 +75,10 @@ function FloatingInput(props: {
         )}
       >
         <Icon
-          className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+          className={cn(
+            'pointer-events-none absolute left-3.5 z-10 h-5 w-5 text-slate-400 transition-all duration-200 dark:text-slate-500',
+            lifted ? 'top-[1.125rem] -translate-y-1/2' : 'top-1/2 -translate-y-1/2',
+          )}
           aria-hidden
         />
         <input
@@ -82,12 +88,14 @@ function FloatingInput(props: {
           disabled={disabled}
           autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder={placeholder}
           className={cn(
-            'peer w-full rounded-xl bg-transparent pl-11 pr-3 outline-none',
+            'peer relative z-[2] w-full rounded-xl bg-white pl-11 pr-3 outline-none dark:bg-slate-950',
             'pt-5 pb-2.5 text-[15px] text-slate-900 dark:text-slate-100',
-            /* Hint nativo solo al enfocar campo vacío; posición del label sigue :placeholder-shown y autofill */
-            'placeholder:text-transparent focus:placeholder:text-slate-400/80 dark:focus:placeholder:text-slate-500',
+            /* Hint nativo solo con foco y vacío; el label usa estado React (fiable en claro/oscuro) */
+            'placeholder:text-transparent focus:placeholder:text-slate-500/90 dark:focus:placeholder:text-slate-400',
           )}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
@@ -95,12 +103,12 @@ function FloatingInput(props: {
         <label
           htmlFor={id}
           className={cn(
-            'pointer-events-none absolute left-11 z-[1] origin-left text-slate-500 transition-all duration-200 dark:text-slate-400',
-            /* Posición según el DOM (valor, autofill), no solo estado React */
-            'top-1/2 -translate-y-1/2 text-sm',
-            'peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:font-medium peer-focus:text-brand-600 dark:peer-focus:text-brand-500',
-            'peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:font-medium peer-[:not(:placeholder-shown)]:text-brand-600 dark:peer-[:not(:placeholder-shown)]:text-brand-500',
-            'peer-[&:is(:-webkit-autofill)]:top-2 peer-[&:is(:-webkit-autofill)]:translate-y-0 peer-[&:is(:-webkit-autofill)]:text-xs peer-[&:is(:-webkit-autofill)]:font-medium peer-[&:is(:-webkit-autofill)]:text-brand-600 dark:peer-[&:is(:-webkit-autofill)]:text-brand-500',
+            'pointer-events-none absolute left-11 z-[3] origin-left transition-all duration-200',
+            lifted
+              ? 'top-2 translate-y-0 text-xs font-medium text-brand-600 dark:text-brand-400'
+              : 'top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400',
+            /* Autofill sin actualizar React aún: sube el label igual */
+            'peer-[&:is(:-webkit-autofill)]:top-2 peer-[&:is(:-webkit-autofill)]:translate-y-0 peer-[&:is(:-webkit-autofill)]:text-xs peer-[&:is(:-webkit-autofill)]:font-medium peer-[&:is(:-webkit-autofill)]:text-brand-600 dark:peer-[&:is(:-webkit-autofill)]:text-brand-400',
           )}
         >
           {label}
