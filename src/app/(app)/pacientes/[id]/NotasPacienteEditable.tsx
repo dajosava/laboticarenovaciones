@@ -85,8 +85,8 @@ export default function NotasPacienteEditable({
 
   return (
     <div className="mt-3 flex items-start gap-2">
-      <p className="text-sm text-gray-600 flex-1">
-        <span className="font-medium text-gray-500">📝 </span>
+      <p className="flex-1 text-sm text-emerald-700 dark:text-emerald-300">
+        <span className="font-medium text-emerald-600 dark:text-emerald-400">📝 </span>
         {notasIniciales}
       </p>
       <button

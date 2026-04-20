@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Building2,
   Calendar,
+  ChevronDown,
   CheckCircle2,
   Clock,
   HeartPulse,
@@ -151,7 +152,6 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
     (a, b) => calcularDiasRestantes(a.fecha_vencimiento) - calcularDiasRestantes(b.fecha_vencimiento),
   )
   const peorTratamiento = tratOrdenUrgencia[0]
-  const hrefRenovarUrgente = peorTratamiento ? `/pacientes/${id}/tratamiento/${peorTratamiento.id}/renovar` : null
 
   return (
     <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-6 lg:px-8">
@@ -231,7 +231,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                   ) : null}
                   {paciente.empresa ? <span>Empresa: {paciente.empresa}</span> : null}
                   {paciente.tipo_pago ? (
-                    <span>{paciente.tipo_pago === 'directo' ? 'Pago directo' : 'Reembolso'}</span>
+                    <span>Tipo de pago: {paciente.tipo_pago === 'directo' ? 'Pago directo' : 'Reembolso'}</span>
                   ) : null}
                 </div>
               )}
@@ -239,14 +239,6 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
           </div>
 
           <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:w-auto lg:flex-col">
-            {hrefRenovarUrgente ? (
-              <Link
-                href={hrefRenovarUrgente}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-500"
-              >
-                Renovar
-              </Link>
-            ) : null}
             {peorTratamiento ? (
               <div className="flex w-full justify-center sm:w-auto sm:justify-start">
                 <BotonContactadoRenovacion
@@ -268,173 +260,167 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
         </div>
       </header>
 
-      {/* STATUS BAR */}
-      <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-        <div className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Estado actual del tratamiento en relación a su renovación
-          </p>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{global.desc}</p>
-        </div>
-        <div className="h-2 w-full bg-slate-200/80 dark:bg-slate-800">
-          <div
-            className={`h-full transition-all ${global.barClass}`}
-            style={{
-              width:
-                global.estado === 'sin_activos'
-                  ? '8%'
-                  : global.estado === 'critico'
-                    ? '100%'
-                    : global.estado === 'seguimiento'
-                      ? '66%'
-                      : '33%',
-            }}
-          />
-        </div>
-        <div className="flex justify-between px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:px-5">
-          <span className={global.estado === 'estable' ? 'text-emerald-700 dark:text-emerald-400' : ''}>Estable</span>
-          <span className={global.estado === 'seguimiento' ? 'text-amber-700 dark:text-amber-400' : ''}>Seguimiento</span>
-          <span className={global.estado === 'critico' ? 'text-red-600 dark:text-red-400' : ''}>Crítico</span>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* IZQUIERDA: tratamientos + historial */}
         <div className="space-y-6 lg:col-span-7 xl:col-span-8">
           <section id="tratamientos-activos" className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-            <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
-              <Calendar className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Tratamientos activos</h2>
-            </div>
-            {tratamientosActivos.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No hay tratamientos activos registrados.</p>
-            ) : (
-              <div className="space-y-4">
-                {tratamientosActivos.map((t: Tratamiento) => {
-                  const dias = calcularDiasRestantes(t.fecha_vencimiento)
-                  const riesgo = riesgoTratamiento(dias)
-                  const porcentaje = Math.max(0, Math.min(100, (dias / 30) * 100))
-                  return (
-                    <article
-                      key={t.id}
-                      className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 md:p-5"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{formatoMedicamento(t)}</h3>
-                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            {t.dosis_diaria} / día · {t.tipo === 'cronico' ? 'Crónico' : 'Temporal'}
+            <details className="group">
+              <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-200 ease-out hover:border-slate-200 hover:bg-slate-100/90 hover:shadow-md active:scale-[0.995] dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:shadow-lg dark:hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900">
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-hover:text-slate-800 dark:text-slate-400 dark:group-hover:text-slate-100">
+                    Tratamientos activos
+                  </h2>
+                </span>
+                <ChevronDown
+                  className="h-5 w-5 shrink-0 text-slate-400 transition-all duration-200 ease-out group-hover:text-brand-600 group-open:rotate-180 dark:text-slate-500 dark:group-hover:text-brand-400"
+                  aria-hidden
+                />
+              </summary>
+              <div className="mt-4">
+                {tratamientosActivos.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">No hay tratamientos activos registrados.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {tratamientosActivos.map((t: Tratamiento) => {
+                      const dias = calcularDiasRestantes(t.fecha_vencimiento)
+                      const riesgo = riesgoTratamiento(dias)
+                      const porcentaje = Math.max(0, Math.min(100, (dias / 30) * 100))
+                      return (
+                        <article
+                          key={t.id}
+                          className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 md:p-5"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{formatoMedicamento(t)}</h3>
+                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                {t.dosis_diaria} / día · {t.tipo === 'cronico' ? 'Crónico' : 'Temporal'}
+                              </p>
+                            </div>
+                            <span
+                              className={cn(
+                                'self-start rounded-full border px-2.5 py-1 text-xs font-semibold',
+                                clasesColorBadgeKpiPanelRenovaciones(dias),
+                              )}
+                            >
+                              {dias < 0 ? 'Vencido' : dias <= 1 ? 'Crítico' : dias <= 5 ? 'Urgente' : dias <= 15 ? 'Planificación' : 'Al día'}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-400 sm:grid-cols-2">
+                            <p>
+                              <span className="font-medium text-slate-500 dark:text-slate-400">Último surtido:</span>{' '}
+                              {formatearFechaCorta(t.fecha_surtido)}
+                            </p>
+                            <p>
+                              <span className="font-medium text-slate-500 dark:text-slate-400">Vence:</span>{' '}
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{textoVencimiento(dias)}</span>
+                              <span className="text-slate-400"> ({formatearFechaCorta(t.fecha_vencimiento)})</span>
+                            </p>
+                          </div>
+
+                          <p className="mt-2 text-sm">
+                            <span className="font-medium text-slate-500 dark:text-slate-400">Necesidad de renovación:</span>{' '}
+                            <span className={`font-bold ${riesgo.className}`}>{riesgo.label}</span>
+                            {dias < 0 ? <span className="text-slate-500"> — sin renovación registrada tras vencimiento</span> : null}
                           </p>
-                        </div>
-                        <span
-                          className={cn(
-                            'self-start rounded-full border px-2.5 py-1 text-xs font-semibold',
-                            clasesColorBadgeKpiPanelRenovaciones(dias),
-                          )}
-                        >
-                          {dias < 0 ? 'Vencido' : dias <= 1 ? 'Crítico' : dias <= 5 ? 'Urgente' : dias <= 15 ? 'Planificación' : 'Al día'}
-                        </span>
-                      </div>
 
-                      <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-400 sm:grid-cols-2">
-                        <p>
-                          <span className="font-medium text-slate-500 dark:text-slate-400">Último surtido:</span>{' '}
-                          {formatearFechaCorta(t.fecha_surtido)}
-                        </p>
-                        <p>
-                          <span className="font-medium text-slate-500 dark:text-slate-400">Vence:</span>{' '}
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{textoVencimiento(dias)}</span>
-                          <span className="text-slate-400"> ({formatearFechaCorta(t.fecha_vencimiento)})</span>
-                        </p>
-                      </div>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                            <div
+                              className={`h-full rounded-full ${
+                                dias <= 1 ? 'bg-red-500' : dias <= 5 ? 'bg-amber-500' : dias <= 15 ? 'bg-yellow-400' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${porcentaje}%` }}
+                            />
+                          </div>
 
-                      <p className="mt-2 text-sm">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">Necesidad de renovación:</span>{' '}
-                        <span className={`font-bold ${riesgo.className}`}>{riesgo.label}</span>
-                        {dias < 0 ? <span className="text-slate-500"> — sin renovación registrada tras vencimiento</span> : null}
-                      </p>
-
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                        <div
-                          className={`h-full rounded-full ${
-                            dias <= 1 ? 'bg-red-500' : dias <= 5 ? 'bg-amber-500' : dias <= 15 ? 'bg-yellow-400' : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${porcentaje}%` }}
-                        />
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link
-                          href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
-                          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
-                        >
-                          <CheckCircle2 className="h-4 w-4" aria-hidden />
-                          Registrar renovación
-                        </Link>
-                        <a
-                          href="#historial-renovaciones"
-                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                          Ver historial
-                        </a>
-                        <BotonContactadoRenovacion tratamientoId={t.id} contactado={!!t.contactado_renovacion_en} />
-                      </div>
-                    </article>
-                  )
-                })}
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Link
+                              href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
+                              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
+                            >
+                              <CheckCircle2 className="h-4 w-4" aria-hidden />
+                              Registrar renovación
+                            </Link>
+                            <a
+                              href="#historial-renovaciones"
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              Ver historial
+                            </a>
+                            <BotonContactadoRenovacion tratamientoId={t.id} contactado={!!t.contactado_renovacion_en} />
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            </details>
           </section>
 
           <section id="historial-renovaciones" className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-            <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
-              <Clock className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Historial de renovaciones</h2>
-            </div>
-            {renovaciones.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Sin renovaciones registradas aún.</p>
-            ) : (
-              <ol className="relative ms-2 border-l border-slate-200 ps-6 dark:border-slate-700">
-                {renovaciones.map((r: Renovacion) => {
-                  const t = tratById.get(r.tratamiento_id)
-                  const diasDiff = t ? differenceInDays(parseISO(r.fecha), parseISO(t.fecha_vencimiento)) : 0
-                  const tardia = diasDiff > 0
-                  return (
-                    <li key={r.id} className="mb-8 ms-2 last:mb-2">
-                      <span
-                        className={`absolute -start-1.5 mt-1.5 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white shadow dark:border-slate-900 ${
-                          tardia ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'
-                        }`}
-                      >
-                        {tardia ? <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />}
-                      </span>
-                      <time className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{formatearFechaCorta(r.fecha)}</time>
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {tardia ? 'Renovación tardía' : 'Renovación realizada'}
-                        {tardia && diasDiff > 0 ? (
-                          <span className="ml-1 text-amber-700 dark:text-amber-300">(+{diasDiff} día{diasDiff !== 1 ? 's' : ''} vs vencimiento vigente del tratamiento)</span>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {r.farmacia?.nombre ?? 'Sucursal'} · {r.empleado?.nombre ?? '—'}
-                        {t ? ` · ${formatoMedicamento(t)}` : ''}
-                      </p>
-                      {r.hubo_regalia && r.unidades_regalia ? (
-                        <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-400">
-                          Regalía: +{r.unidades_regalia} unidad{r.unidades_regalia !== 1 ? 'es' : ''}
-                        </p>
-                      ) : null}
-                      {r.numero_factura?.trim() ? (
-                        <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
-                          Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
-                        </p>
-                      ) : null}
-                      {r.notas ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}
-                    </li>
-                  )
-                })}
-              </ol>
-            )}
+            <details className="group">
+              <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-200 ease-out hover:border-slate-200 hover:bg-slate-100/90 hover:shadow-md active:scale-[0.995] dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:shadow-lg dark:hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900">
+                <span className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-hover:text-slate-800 dark:text-slate-400 dark:group-hover:text-slate-100">
+                    Historial de renovaciones
+                  </h2>
+                </span>
+                <ChevronDown
+                  className="h-5 w-5 shrink-0 text-slate-400 transition-all duration-200 ease-out group-hover:text-brand-600 group-open:rotate-180 dark:text-slate-500 dark:group-hover:text-brand-400"
+                  aria-hidden
+                />
+              </summary>
+              <div className="mt-4">
+                {renovaciones.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Sin renovaciones registradas aún.</p>
+                ) : (
+                  <ol className="relative ms-2 border-l border-slate-200 ps-6 dark:border-slate-700">
+                    {renovaciones.map((r: Renovacion) => {
+                      const t = tratById.get(r.tratamiento_id)
+                      const diasDiff = t ? differenceInDays(parseISO(r.fecha), parseISO(t.fecha_vencimiento)) : 0
+                      const tardia = diasDiff > 0
+                      return (
+                        <li key={r.id} className="mb-8 ms-2 last:mb-2">
+                          <span
+                            className={`absolute -start-1.5 mt-1.5 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white shadow dark:border-slate-900 ${
+                              tardia ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'
+                            }`}
+                          >
+                            {tardia ? <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />}
+                          </span>
+                          <time className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{formatearFechaCorta(r.fecha)}</time>
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                            {tardia ? 'Renovación tardía' : 'Renovación realizada'}
+                            {tardia && diasDiff > 0 ? (
+                              <span className="ml-1 text-amber-700 dark:text-amber-300">(+{diasDiff} día{diasDiff !== 1 ? 's' : ''} vs vencimiento vigente del tratamiento)</span>
+                            ) : null}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {r.farmacia?.nombre ?? 'Sucursal'} · {r.empleado?.nombre ?? '—'}
+                            {t ? ` · ${formatoMedicamento(t)}` : ''}
+                          </p>
+                          {r.hubo_regalia && r.unidades_regalia ? (
+                            <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-400">
+                              Regalía: +{r.unidades_regalia} unidad{r.unidades_regalia !== 1 ? 'es' : ''}
+                            </p>
+                          ) : null}
+                          {r.numero_factura?.trim() ? (
+                            <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                              Factura: <span className="font-mono">{r.numero_factura.trim()}</span>
+                            </p>
+                          ) : null}
+                          {r.notas ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.notas}</p> : null}
+                        </li>
+                      )
+                    })}
+                  </ol>
+                )}
+              </div>
+            </details>
           </section>
         </div>
 
