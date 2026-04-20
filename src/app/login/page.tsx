@@ -64,7 +64,7 @@ function FloatingInput(props: {
     <div>
       <div
         className={cn(
-          'rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-[box-shadow,border-color] dark:bg-slate-950 dark:shadow-none',
+          'login-auth-field rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-[box-shadow,border-color] dark:shadow-none',
           error
             ? 'border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
             : 'border-slate-200 dark:border-slate-700',

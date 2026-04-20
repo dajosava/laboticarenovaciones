@@ -87,6 +87,25 @@ html.dark textarea:focus {
   border-color: #22c55e;
 }
 
+/* Login: sin bloque claro detrás del texto (override input + .bg-white + autofill WebKit) */
+html.dark .login-auth-field {
+  background-color: transparent !important;
+}
+
+html.dark .login-auth-field input {
+  background-color: transparent !important;
+}
+
+html.dark .login-auth-field input:-webkit-autofill,
+html.dark .login-auth-field input:-webkit-autofill:hover,
+html.dark .login-auth-field input:-webkit-autofill:focus,
+html.dark .login-auth-field input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgb(2 6 23) inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  caret-color: #f1f5f9;
+  transition: background-color 99999s ease-out 0s;
+}
+
 /* Fechas y selects: controles nativos visibles en tema oscuro */
 html.dark input[type='date'],
 html.dark input[type='datetime-local'],
