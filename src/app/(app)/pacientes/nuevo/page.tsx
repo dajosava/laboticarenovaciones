@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
@@ -8,6 +8,14 @@ import { toast } from 'sonner'
 import type { Farmacia } from '@/types'
 import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
 import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
+import {
+  PROVINCIAS_CR,
+  cantonesPorProvincia,
+  distritosPorProvinciaCanton,
+} from '@/lib/costa-rica/direccion-cr'
+import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
+import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
+import { MIN_CARACTERES_ARREGLO_ENTREGA, coincidenciasRiesgoEntrega } from '@/lib/entrega/lugares-riesgo-entrega'
 
 const PERSONA_API_URL = process.env.NEXT_PUBLIC_PERSONA_API_URL || 'http://127.0.0.1:8000'
 
@@ -42,8 +50,14 @@ export default function NuevoPacientePage() {
   // Form state
   const [paciente, setPaciente] = useState({
     nombre: '', telefono: '', email: '', farmacia_id: '', notas: '',
-    direccion: '', empresa: '', seguro_medico: '', tipo_pago: '' as '' | 'directo' | 'reembolso',
+    empresa: '', seguro_medico: '', tipo_pago: '' as '' | 'directo' | 'reembolso',
   })
+  const [provinciaCr, setProvinciaCr] = useState<string>(PROVINCIAS_CR[0])
+  const [cantonCr, setCantonCr] = useState('')
+  const [distritoCr, setDistritoCr] = useState('')
+  const [direccionSenas, setDireccionSenas] = useState('')
+  const [arregloEntrega, setArregloEntrega] = useState('')
+  const [modalRiesgoEntregaAbierto, setModalRiesgoEntregaAbierto] = useState(false)
   const hoyIso = new Date().toISOString().split('T')[0]
   const [tratamiento, setTratamiento] = useState({
     medicamentoId: '',
@@ -72,6 +86,12 @@ export default function NuevoPacientePage() {
     }
     cargar()
   }, [])
+
+  const coincidenciasRiesgo = useMemo(
+    () => coincidenciasRiesgoEntrega({ canton: cantonCr, distrito: distritoCr, senas: direccionSenas }),
+    [cantonCr, distritoCr, direccionSenas],
+  )
+  const requiereArregloEntrega = coincidenciasRiesgo.length > 0
 
   async function buscarPorCedula() {
     const cedulaTrim = cedula.trim()
@@ -108,43 +128,97 @@ export default function NuevoPacientePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (cantonCr && !distritoCr) {
+      toast.error('Si eliges cantón, selecciona también el distrito.')
+      return
+    }
+    if (distritoCr && !cantonCr) {
+      toast.error('Selecciona el cantón que corresponde al distrito.')
+      return
+    }
+    if (direccionSenas.trim() && (!cantonCr || !distritoCr)) {
+      toast.error('Para agregar señas o dirección detallada, completa cantón y distrito.')
+      return
+    }
+    if (cantonCr && distritoCr) {
+      const permitidos = distritosPorProvinciaCanton(provinciaCr, cantonCr)
+      if (!permitidos.includes(distritoCr)) {
+        toast.error('El distrito no corresponde al cantón seleccionado. Vuelva a elegir cantón y distrito.')
+        return
+      }
+    }
+
+    const direccionCompuesta =
+      cantonCr && distritoCr
+        ? [
+            `Provincia: ${provinciaCr}`,
+            `Cantón: ${cantonCr}`,
+            `Distrito: ${distritoCr}`,
+            direccionSenas.trim() ? `Señas: ${direccionSenas.trim()}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : null
+
+    const riesgoLugares = coincidenciasRiesgoEntrega({
+      canton: cantonCr,
+      distrito: distritoCr,
+      senas: direccionSenas,
+    })
+    if (riesgoLugares.length > 0) {
+      const doc = arregloEntrega.trim()
+      if (doc.length < MIN_CARACTERES_ARREGLO_ENTREGA) {
+        setModalRiesgoEntregaAbierto(true)
+        toast.error(
+          `Dirección en zona de riesgo para entrega (${riesgoLugares.join(', ')}). Documente el arreglo acordado con el cliente (mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres).`,
+        )
+        return
+      }
+    }
+
+    const conMedicamento = !!tratamiento.medicamentoId.trim()
+    if (conMedicamento) {
+      if (!tratamiento.fecha_inicio_tratamiento.trim()) {
+        toast.error('Indica la fecha de inicio de tratamiento (obligatoria).')
+        return
+      }
+      if (!fechaVencimientoPreview) {
+        toast.error(
+          'Para registrar el medicamento, completa dosis diarias, unidades en la caja, fecha de despacho e inicio de tratamiento.',
+        )
+        return
+      }
+      if (!tratamiento.numero_factura?.trim()) {
+        toast.error('El número de factura es obligatorio.')
+        return
+      }
+      if (!tratamiento.monto_total_factura.trim()) {
+        toast.error('El monto total de la factura es obligatorio.')
+        return
+      }
+      if (parseMontoFacturaInput(tratamiento.monto_total_factura) === null) {
+        toast.error('El monto total de la factura no es válido.')
+        return
+      }
+    }
+
     setLoading(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
-
-      const conMedicamento = !!tratamiento.medicamentoId.trim()
-      if (conMedicamento) {
-        if (!tratamiento.fecha_inicio_tratamiento.trim()) {
-          toast.error('Indica la fecha de inicio de tratamiento (obligatoria).')
-          return
-        }
-        if (!fechaVencimientoPreview) {
-          toast.error(
-            'Para registrar el medicamento, completa dosis diarias, unidades en la caja, fecha de despacho e inicio de tratamiento.',
-          )
-          return
-        }
-        if (!tratamiento.numero_factura?.trim()) {
-          toast.error('El número de factura es obligatorio.')
-          return
-        }
-        if (!tratamiento.monto_total_factura.trim()) {
-          toast.error('El monto total de la factura es obligatorio.')
-          return
-        }
-        if (parseMontoFacturaInput(tratamiento.monto_total_factura) === null) {
-          toast.error('El monto total de la factura no es válido.')
-          return
-        }
-      }
 
       // 1. Crear paciente
       const payload = {
         nombre: paciente.nombre,
         telefono: paciente.telefono,
         email: paciente.email || null,
-        direccion: paciente.direccion || null,
+        direccion: direccionCompuesta,
+        provincia_cr: cantonCr && distritoCr ? provinciaCr : null,
+        canton_cr: cantonCr || null,
+        distrito_cr: distritoCr || null,
+        direccion_senas: direccionSenas.trim() || null,
+        arreglo_entrega: riesgoLugares.length > 0 ? arregloEntrega.trim() : null,
         empresa: paciente.empresa || null,
         seguro_medico: paciente.seguro_medico || null,
         tipo_pago: paciente.tipo_pago || null,
@@ -265,10 +339,86 @@ export default function NuevoPacientePage() {
               <input type="email" value={paciente.email} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="correo@ejemplo.com" />
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección (opcional)</label>
-              <input type="text" value={paciente.direccion} onChange={e => setPaciente(p => ({ ...p, direccion: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Calle, número, colonia, CP" />
+            <div className="col-span-2 border-t border-gray-100 pt-4 mt-1">
+              <p className="text-sm font-medium text-gray-800 mb-3">Dirección en Costa Rica</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                  <ListaDesplegableAbajo
+                    permitirVacio={false}
+                    value={provinciaCr}
+                    onValueChange={(v) => {
+                      setProvinciaCr(v)
+                      setCantonCr('')
+                      setDistritoCr('')
+                    }}
+                    opciones={PROVINCIAS_CR.map((p) => ({ value: p, label: p }))}
+                    placeholder={PROVINCIAS_CR[0]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantón</label>
+                  <ListaDesplegableAbajo
+                    value={cantonCr}
+                    onValueChange={(c) => {
+                      setCantonCr(c)
+                      setDistritoCr('')
+                    }}
+                    opciones={cantonesPorProvincia(provinciaCr).map((c) => ({ value: c, label: c }))}
+                    placeholder="Seleccionar cantón…"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
+                  <ListaDesplegableAbajo
+                    value={distritoCr}
+                    onValueChange={setDistritoCr}
+                    opciones={distritosPorProvinciaCanton(provinciaCr, cantonCr).map((d) => ({
+                      value: d,
+                      label: d,
+                    }))}
+                    placeholder={cantonCr ? 'Seleccionar distrito…' : 'Primero elija cantón'}
+                    disabled={!cantonCr}
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Señas / detalle (opcional)</label>
+                <input
+                  type="text"
+                  value={direccionSenas}
+                  onChange={(e) => setDireccionSenas(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ej: de la esquina del parque, 200 m norte, casa azul"
+                />
+              </div>
+              {requiereArregloEntrega ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    Zona de riesgo para entrega
+                  </p>
+                  <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
+                    Coincidencias: {coincidenciasRiesgo.join(', ')}. Coordine con el cliente un punto seguro (trabajo,
+                    punto medio u otro acuerdo) y regístrelo aquí.
+                  </p>
+                  <label htmlFor="arreglo-entrega-paciente" className="mt-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
+                    Arreglo de entrega <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    id="arreglo-entrega-paciente"
+                    value={arregloEntrega}
+                    onChange={(e) => setArregloEntrega(e.target.value)}
+                    rows={3}
+                    required={requiereArregloEntrega}
+                    className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:border-amber-800 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Ej: entrega acordada en oficinas del Hospital México, recepción, lunes a viernes 9–17 h"
+                  />
+                  <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
+                    Mínimo {MIN_CARACTERES_ARREGLO_ENTREGA} caracteres. Obligatorio mientras la dirección siga en zona de
+                    riesgo.
+                  </p>
+                </div>
+              ) : null}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (opcional)</label>
@@ -453,6 +603,17 @@ export default function NuevoPacientePage() {
           </button>
         </div>
       </form>
+
+      <ModalAlertaRiesgoEntrega
+        open={modalRiesgoEntregaAbierto}
+        onOpenChange={(open) => {
+          setModalRiesgoEntregaAbierto(open)
+          if (!open) {
+            requestAnimationFrame(() => document.getElementById('arreglo-entrega-paciente')?.focus())
+          }
+        }}
+        coincidencias={coincidenciasRiesgo}
+      />
     </div>
   )
 }

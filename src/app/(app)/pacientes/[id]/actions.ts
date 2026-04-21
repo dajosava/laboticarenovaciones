@@ -3,6 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
+import { distritosPorProvinciaCanton } from '@/lib/costa-rica/direccion-cr'
+import {
+  MIN_CARACTERES_ARREGLO_ENTREGA,
+  coincidenciasRiesgoEntrega,
+} from '@/lib/entrega/lugares-riesgo-entrega'
 
 function montoObligatorioDesdeDatos(v: unknown): number | null {
   if (v == null || v === '') return null
@@ -45,6 +50,123 @@ export async function actualizarNotasPaciente(pacienteId: string, notas: string)
 
   if (error) return { error: error.message }
 
+  revalidatePath(`/pacientes/${pacienteId}`)
+  return {}
+}
+
+export type PayloadActualizarDatosPaciente = {
+  nombre: string
+  telefono: string
+  email: string | null
+  empresa: string | null
+  seguro_medico: string | null
+  tipo_pago: 'directo' | 'reembolso' | null
+  farmacia_id: string
+  /** Dirección por provincia/cantón/distrito o texto libre legado. */
+  modo_direccion: 'cr' | 'libre'
+  provincia_cr: string | null
+  canton_cr: string | null
+  distrito_cr: string | null
+  direccion_senas: string | null
+  direccion_libre: string | null
+  arreglo_entrega: string | null
+}
+
+export async function actualizarDatosPaciente(
+  pacienteId: string,
+  data: PayloadActualizarDatosPaciente,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const nombre = data.nombre.trim()
+  const telefono = data.telefono.trim()
+  if (!nombre) return { error: 'El nombre es obligatorio.' }
+  if (!telefono) return { error: 'El teléfono es obligatorio.' }
+
+  const farmaciaId = data.farmacia_id.trim()
+  if (!farmaciaId) return { error: 'Seleccione la farmacia asignada.' }
+
+  let provinciaCr: string | null = null
+  let cantonCr: string | null = null
+  let distritoCr: string | null = null
+  let direccionSenas: string | null = null
+  let direccionFinal: string | null = null
+
+  if (data.modo_direccion === 'cr') {
+    const p = data.provincia_cr?.trim() || ''
+    const c = data.canton_cr?.trim() || ''
+    const d = data.distrito_cr?.trim() || ''
+    if (!p || !c || !d) {
+      return { error: 'Indique provincia, cantón y distrito, o use dirección en texto libre.' }
+    }
+    const validos = distritosPorProvinciaCanton(p, c)
+    if (!validos.includes(d)) {
+      return { error: 'El distrito no corresponde al cantón indicado.' }
+    }
+    provinciaCr = p
+    cantonCr = c
+    distritoCr = d
+    direccionSenas = data.direccion_senas?.trim() || null
+    direccionFinal = [
+      `Provincia: ${p}`,
+      `Cantón: ${c}`,
+      `Distrito: ${d}`,
+      direccionSenas ? `Señas: ${direccionSenas}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  } else {
+    direccionFinal = data.direccion_libre?.trim() || null
+  }
+
+  const riesgo =
+    data.modo_direccion === 'cr'
+      ? coincidenciasRiesgoEntrega({
+          canton: cantonCr ?? '',
+          distrito: distritoCr ?? '',
+          senas: direccionSenas ?? '',
+        })
+      : coincidenciasRiesgoEntrega({
+          canton: '',
+          distrito: '',
+          senas: data.direccion_libre ?? '',
+        })
+
+  const arregloTrim = (data.arreglo_entrega ?? '').trim()
+  if (riesgo.length > 0 && arregloTrim.length < MIN_CARACTERES_ARREGLO_ENTREGA) {
+    return {
+      error: `Dirección en zona de riesgo para entrega (${riesgo.join(', ')}). Documente el arreglo acordado (mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres).`,
+    }
+  }
+
+  const tipoPago =
+    data.tipo_pago === 'directo' || data.tipo_pago === 'reembolso' ? data.tipo_pago : null
+
+  const { error } = await supabase
+    .from('pacientes')
+    .update({
+      nombre,
+      telefono,
+      email: data.email?.trim() || null,
+      empresa: data.empresa?.trim() || null,
+      seguro_medico: data.seguro_medico?.trim() || null,
+      tipo_pago: tipoPago,
+      farmacia_id: farmaciaId,
+      provincia_cr: provinciaCr,
+      canton_cr: cantonCr,
+      distrito_cr: distritoCr,
+      direccion_senas: direccionSenas,
+      direccion: direccionFinal,
+      arreglo_entrega: riesgo.length > 0 ? arregloTrim : null,
+    })
+    .eq('id', pacienteId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/pacientes')
   revalidatePath(`/pacientes/${pacienteId}`)
   return {}
 }

@@ -37,6 +37,13 @@ export interface Paciente {
   telefono: string
   email: string | null
   direccion: string | null
+  /** Dirección Costa Rica (formulario estructurado); null si no se capturó. */
+  provincia_cr?: string | null
+  canton_cr?: string | null
+  distrito_cr?: string | null
+  direccion_senas?: string | null
+  /** Acuerdo de entrega si la dirección cae en zona de riesgo (punto medio, trabajo, etc.). */
+  arreglo_entrega?: string | null
   empresa: string | null
   seguro_medico: string | null
   tipo_pago: TipoPago | null

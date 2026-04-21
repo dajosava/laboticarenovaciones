@@ -12,24 +12,12 @@ import type { Renovacion, Tratamiento } from '@/types'
 import Link from 'next/link'
 import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import {
-  Activity,
-  AlertTriangle,
-  Building2,
-  Calendar,
-  ChevronDown,
-  CheckCircle2,
-  Clock,
-  HeartPulse,
-  Mail,
-  MapPin,
-  Phone,
-  Shield,
-  User,
-} from 'lucide-react'
+import { Activity, AlertTriangle, Calendar, ChevronDown, CheckCircle2, Clock } from 'lucide-react'
 import BotonContactadoRenovacion from '@/app/(app)/dashboard/BotonContactadoRenovacion'
 import BotonEliminarPaciente from './BotonEliminarPaciente'
 import NotasPacienteEditable from './NotasPacienteEditable'
+import TarjetaDatosPacienteEditable from './TarjetaDatosPacienteEditable'
+import { tieneDireccionCr } from '@/lib/costa-rica/paciente-direccion'
 
 type EstadoPaciente = 'critico' | 'seguimiento' | 'estable' | 'sin_activos'
 
@@ -91,6 +79,12 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
     .single()
 
   if (!paciente) notFound()
+
+  const { data: farmaciasActivas } = await supabase
+    .from('farmacias')
+    .select('id, nombre')
+    .eq('activa', true)
+    .order('nombre')
 
   const { data: tratamientos } = await supabase
     .from('tratamientos')
@@ -159,85 +153,34 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
       {/* HEADER — control center */}
       <header className="mb-6 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-2xl font-bold text-white shadow-md">
-              {paciente.nombre.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white md:text-3xl">{paciente.nombre}</h1>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-500">
-                  <User className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  ID {paciente.id.slice(0, 8)}…
-                </span>
-                {paciente.email ? (
-                  <a href={`mailto:${paciente.email}`} className="inline-flex items-center gap-1.5 hover:text-brand-600 dark:hover:text-brand-400">
-                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    {paciente.email}
-                  </a>
-                ) : null}
-                {paciente.telefono ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    {paciente.telefono}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                    global.estado === 'critico'
-                      ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200'
-                      : global.estado === 'seguimiento'
-                        ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
-                        : global.estado === 'estable'
-                          ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-                          : 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  <HeartPulse className="h-3.5 w-3.5" aria-hidden />
-                  Estado: {global.label}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{global.desc}</span>
-              </div>
-
-              <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
-                <p className="inline-flex items-center gap-2">
-                  <Building2 className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Sucursal:</span>
-                  {paciente.farmacia?.nombre ?? '—'}
-                </p>
-                {paciente.seguro_medico ? (
-                  <p className="inline-flex items-center gap-2">
-                    <Shield className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                    <span className="font-medium text-slate-500 dark:text-slate-400">Seguro:</span>
-                    {paciente.seguro_medico}
-                  </p>
-                ) : null}
-                <p className="inline-flex items-center gap-2 sm:col-span-2">
-                  <Clock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Último contacto (renovación):</span>
-                  {ultimoContactoLabel}
-                </p>
-              </div>
-
-              {(paciente.direccion || paciente.empresa || paciente.tipo_pago) && (
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
-                  {paciente.direccion ? (
-                    <span className="inline-flex max-w-full items-start gap-1.5">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                      {paciente.direccion}
-                    </span>
-                  ) : null}
-                  {paciente.empresa ? <span>Empresa: {paciente.empresa}</span> : null}
-                  {paciente.tipo_pago ? (
-                    <span>Tipo de pago: {paciente.tipo_pago === 'directo' ? 'Pago directo' : 'Reembolso'}</span>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
+          <TarjetaDatosPacienteEditable
+            pacienteId={id}
+            inicial={{
+              id: paciente.id,
+              nombre: paciente.nombre,
+              telefono: paciente.telefono,
+              email: paciente.email,
+              empresa: paciente.empresa,
+              seguro_medico: paciente.seguro_medico,
+              tipo_pago: paciente.tipo_pago,
+              farmacia_id: paciente.farmacia_id,
+              farmacia_nombre: paciente.farmacia?.nombre ?? null,
+              provincia_cr: paciente.provincia_cr,
+              canton_cr: paciente.canton_cr,
+              distrito_cr: paciente.distrito_cr,
+              direccion_senas: paciente.direccion_senas,
+              direccion: paciente.direccion,
+              arreglo_entrega: paciente.arreglo_entrega,
+              usar_direccion_cr: tieneDireccionCr(paciente),
+            }}
+            farmacias={farmaciasActivas ?? []}
+            estadoGlobal={{
+              estado: global.estado,
+              label: global.label,
+              desc: global.desc,
+            }}
+            ultimoContactoLabel={ultimoContactoLabel}
+          />
 
           <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:w-auto lg:flex-col">
             {peorTratamiento ? (
