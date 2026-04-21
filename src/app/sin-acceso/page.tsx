@@ -20,11 +20,12 @@ export default function SinAccesoPage() {
         <h1 className="text-xl font-bold text-gray-900 mb-2">Sin acceso al panel</h1>
         <p className="text-gray-600 text-sm mb-6">
           Tu cuenta de Supabase está correcta, pero no tienes un perfil de empleado en el sistema.
-          Un <strong>super administrador</strong> debe registrarte en <strong>Gestión → Usuarios</strong> (el{' '}
-          <code className="bg-gray-100 px-1 rounded dark:bg-slate-800">id</code> debe coincidir con tu usuario en Authentication).
+          Un <strong>super administrador</strong> debe darte de alta en <strong>Usuarios del sistema</strong> (desde el menú de
+          tu usuario, abajo a la izquierda: <strong>Configuración</strong>). El{' '}
+          <code className="bg-gray-100 px-1 rounded dark:bg-slate-800">id</code> del empleado debe coincidir con tu usuario en Authentication.
         </p>
         <p className="text-gray-500 text-xs mb-6">
-          Si administras el proyecto: crea primero la sucursal si aplica, el usuario en Auth, y luego el perfil en Usuarios con el mismo UUID.
+          Si administras el proyecto: crea primero la sucursal si aplica, el usuario en Auth, y luego el perfil en Usuarios del sistema con el mismo UUID.
         </p>
         <button
           type="button"

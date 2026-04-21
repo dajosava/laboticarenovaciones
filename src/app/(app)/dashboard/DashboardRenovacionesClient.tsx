@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowUpDown, BarChart3, CheckSquare, Download, History, Search, Square } from 'lucide-react'
+import { ArrowUpDown, BarChart3, CheckSquare, Download, History, RefreshCw, Search, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   compararFilasPanelRenovacionPorPrioridad,
@@ -386,6 +386,14 @@ export default function DashboardRenovacionesClient({
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <BotonContactadoRenovacion tratamientoId={r.id} contactado={r.contactado} />
+                        <Link
+                          href={`/pacientes/${r.paciente_id}/tratamiento/${r.id}/renovar`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white shadow-sm ring-1 ring-emerald-700/25 transition hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:ring-emerald-300/25 dark:hover:bg-emerald-500"
+                          title="Abrir formulario de renovación de este tratamiento"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden />
+                          Renovar
+                        </Link>
                         <button
                           type="button"
                           onClick={() => openTimeline(r.paciente_id)}

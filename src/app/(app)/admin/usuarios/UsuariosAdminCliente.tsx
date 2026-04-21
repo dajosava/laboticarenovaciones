@@ -16,6 +16,9 @@ export type EmpleadoListRow = {
   activo: boolean
   creado_en: string
   farmacia?: { nombre: string } | null
+  /** Texto listo desde Auth (`last_sign_in_at`), calculado en el servidor. */
+  ultimo_acceso_etiqueta: string
+  ultimo_acceso_title: string
 }
 
 type FarmaciaOpt = { id: string; nombre: string }
@@ -47,9 +50,12 @@ const formNuevoVacio: FormState = {
 export default function UsuariosAdminCliente({
   iniciales,
   farmacias,
+  authUltimoAccesoDisponible,
 }: {
   iniciales: EmpleadoListRow[]
   farmacias: FarmaciaOpt[]
+  /** false si no hay service role o falló la API Admin de Auth al listar usuarios. */
+  authUltimoAccesoDisponible: boolean
 }) {
   const router = useRouter()
   const [modalNuevo, setModalNuevo] = useState(false)
@@ -178,6 +184,9 @@ export default function UsuariosAdminCliente({
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Correo</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Rol</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Sucursal</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                Último acceso (Auth)
+              </th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Estado</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Acciones</th>
             </tr>
@@ -191,6 +200,9 @@ export default function UsuariosAdminCliente({
                   {row.rol === 'super_admin' ? 'Super admin' : row.rol === 'admin_sucursal' ? 'Admin sucursal' : 'Empleado'}
                 </td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{farmaciaNombre(row.farmacia_id)}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300" title={row.ultimo_acceso_title}>
+                  {row.ultimo_acceso_etiqueta}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
@@ -220,6 +232,13 @@ export default function UsuariosAdminCliente({
           <p className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No hay empleados registrados.</p>
         ) : null}
       </div>
+      {!authUltimoAccesoDisponible ? (
+        <p className="mt-2 text-xs text-amber-800 dark:text-amber-200/90">
+          La columna «Último acceso» muestra N/D porque el servidor no pudo consultar Authentication (añade{' '}
+          <code className="rounded bg-amber-100 px-1 dark:bg-amber-950/80">SUPABASE_SERVICE_ROLE_KEY</code> en{' '}
+          <code className="rounded bg-amber-100 px-1 dark:bg-amber-950/80">.env.local</code> y reinicia el entorno).
+        </p>
+      ) : null}
 
       {modalNuevo ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">

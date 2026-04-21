@@ -16,7 +16,6 @@ import {
   Settings,
   Stethoscope,
   User,
-  UserCog,
   UserPlus,
   Users,
 } from 'lucide-react'
@@ -84,7 +83,6 @@ const menuGroups: NavGroup[] = [
     id: 'gestion',
     title: 'Gestión',
     items: [
-      { href: '/admin/usuarios', label: 'Usuarios', icon: UserCog, roles: ['super_admin'] },
       { href: '/admin/farmacias', label: 'Sucursales', icon: Building2, roles: ['super_admin'] },
       {
         href: '/admin/medicamentos',

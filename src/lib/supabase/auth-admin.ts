@@ -3,7 +3,53 @@
  * Solo usar en servidor (Server Actions / Route Handlers).
  */
 
-type AuthUserRow = { id: string; email?: string | null }
+type AuthUserRow = { id: string; email?: string | null; last_sign_in_at?: string | null }
+
+/**
+ * Recorre la lista paginada de usuarios en Auth y devuelve `last_sign_in_at` por id.
+ * Requiere `SUPABASE_SERVICE_ROLE_KEY`. Si falta la clave o falla la primera página, `disponible` es false.
+ */
+export async function mapaUltimoInicioSesionAuth(): Promise<{
+  map: Map<string, string | null>
+  disponible: boolean
+}> {
+  const map = new Map<string, string | null>()
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (!base || !key) return { map, disponible: false }
+
+  const perPage = 200
+  let page = 1
+
+  while (page <= 50) {
+    const url = new URL(`${base}/auth/v1/admin/users`)
+    url.searchParams.set('page', String(page))
+    url.searchParams.set('per_page', String(perPage))
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      cache: 'no-store',
+    })
+
+    if (!res.ok) {
+      if (page === 1) return { map: new Map(), disponible: false }
+      break
+    }
+
+    const json = (await res.json()) as { users?: AuthUserRow[] }
+    const users = json.users ?? []
+    for (const u of users) {
+      map.set(u.id, u.last_sign_in_at ?? null)
+    }
+    if (users.length < perPage) break
+    page++
+  }
+
+  return { map, disponible: true }
+}
 
 export async function buscarAuthUserIdPorEmail(email: string): Promise<{ id?: string; email?: string; error?: string }> {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
