@@ -14,6 +14,7 @@ import {
   distritosPorProvinciaCanton,
 } from '@/lib/costa-rica/direccion-cr'
 import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
+import EmpresaCombobox from '@/components/pacientes/EmpresaCombobox'
 import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
 import { MIN_CARACTERES_ARREGLO_ENTREGA, coincidenciasRiesgoEntrega } from '@/lib/entrega/lugares-riesgo-entrega'
 
@@ -128,6 +129,11 @@ export default function NuevoPacientePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!paciente.empresa.trim()) {
+      toast.error('Selecciona la empresa del paciente.')
+      return
+    }
 
     if (cantonCr && !distritoCr) {
       toast.error('Si eliges cantón, selecciona también el distrito.')
@@ -335,7 +341,7 @@ export default function NuevoPacientePage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="5512345678" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
               <input type="email" value={paciente.email} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="correo@ejemplo.com" />
             </div>
@@ -421,12 +427,17 @@ export default function NuevoPacientePage() {
               ) : null}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (opcional)</label>
-              <input type="text" value={paciente.empresa} onChange={e => setPaciente(p => ({ ...p, empresa: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Razón social o empresa" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Empresa <span className="text-red-600">*</span>
+              </label>
+              <EmpresaCombobox
+                required
+                value={paciente.empresa}
+                onValueChange={(empresa) => setPaciente((p) => ({ ...p, empresa }))}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Seguro médico (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seguro médico *</label>
               <select value={paciente.seguro_medico} onChange={e => setPaciente(p => ({ ...p, seguro_medico: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                 <option value="">Seleccionar...</option>
