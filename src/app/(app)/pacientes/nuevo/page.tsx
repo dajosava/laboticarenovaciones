@@ -8,297 +8,210 @@ import { toast } from 'sonner'
 import type { Farmacia } from '@/types'
 import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
 import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
-import {
-  PROVINCIAS_CR,
-  cantonesPorProvincia,
-  distritosPorProvinciaCanton,
-} from '@/lib/costa-rica/direccion-cr'
+import { PROVINCIAS_CR, cantonesPorProvincia, distritosPorProvinciaCanton } from '@/lib/costa-rica/direccion-cr'
 import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
 import EmpresaCombobox from '@/components/pacientes/EmpresaCombobox'
 import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
 import { MIN_CARACTERES_ARREGLO_ENTREGA, coincidenciasRiesgoEntrega } from '@/lib/entrega/lugares-riesgo-entrega'
 
-const PERSONA_API_URL = process.env.NEXT_PUBLIC_PERSONA_API_URL || 'http://127.0.0.1:8000'
+// ─── Constants ───────────────────────────────────────────────────────────────
+const PADRON_API_URL = process.env.NEXT_PUBLIC_SUPABASE_URL_PADRON || ''
+const PADRON_API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PADRON || ''
+const SEGUROS_MEDICOS = ['INS','Pan American Life Insurance','ASSA','BMI','MAPFRE','Mediprocesos','Koris Insurance','Best Doctors Insurance','Adisa']
+const INPUT_CLS = 'w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500'
+const hoyIso = new Date().toISOString().split('T')[0]
 
-interface PersonaResponse {
-  cedula: number
-  nombre_completo: string
-  nombre: string
-  primer_apellido: string
-  segundo_apellido: string
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface PersonaResponse { cedula: number; nombre_completo: string }
 
-const SEGUROS_MEDICOS = [
-  'INS',
-  'Pan American Life Insurance',
-  'ASSA',
-  'BMI',
-  'MAPFRE',
-  'Mediprocesos',
-  'Koris Insurance',
-  'Best Doctors Insurance',
-  'Adisa',
-]
+// ─── Reusable Field ───────────────────────────────────────────────────────────
+const Field = ({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {label} {required && <span className="text-red-600">*</span>}
+    </label>
+    {children}
+    {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+  </div>
+)
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function NuevoPacientePage() {
   const router = useRouter()
   const supabase = createClient()
+
   const [farmacias, setFarmacias] = useState<Farmacia[]>([])
   const [loading, setLoading] = useState(false)
   const [cedula, setCedula] = useState('')
   const [loadingPersona, setLoadingPersona] = useState(false)
+  const [modalRiesgoAbierto, setModalRiesgoAbierto] = useState(false)
 
-  // Form state
   const [paciente, setPaciente] = useState({
-    nombre: '', telefono: '', email: '', farmacia_id: '', notas: '',
-    empresa: '', seguro_medico: '', tipo_pago: '' as '' | 'directo' | 'reembolso',
-  })
-  const [provinciaCr, setProvinciaCr] = useState<string>(PROVINCIAS_CR[0])
-  const [cantonCr, setCantonCr] = useState('')
-  const [distritoCr, setDistritoCr] = useState('')
-  const [direccionSenas, setDireccionSenas] = useState('')
-  const [arregloEntrega, setArregloEntrega] = useState('')
-  const [modalRiesgoEntregaAbierto, setModalRiesgoEntregaAbierto] = useState(false)
-  const hoyIso = new Date().toISOString().split('T')[0]
-  const [tratamiento, setTratamiento] = useState({
-    medicamentoId: '',
-    medicamento: '',
-    marca: '',
-    concentracion: '',
-    dosis_diaria: '',
-    unidades_caja: '',
-    fecha_surtido: hoyIso,
-    fecha_inicio_tratamiento: '',
-    tipo: 'cronico',
-    notas: '',
-    numero_factura: '',
-    monto_total_factura: '',
+    nombre: '', telefono: '', email: '', farmacia_id: '',
+    notas: '', empresa: '', seguro_medico: '',
+    tipo_pago: '' as '' | 'directo' | 'reembolso',
   })
 
+  const [dir, setDir] = useState<{
+    provincia: string
+    canton: string
+    distrito: string
+    senas: string
+    arreglo: string
+  }>({
+    provincia: PROVINCIAS_CR[0], canton: '', distrito: '', senas: '', arreglo: '',
+  })
+
+  const [trat, setTrat] = useState({
+    medicamentoId: '', medicamento: '', marca: '', concentracion: '',
+    dosis_diaria: '', unidades_caja: '', fecha_surtido: hoyIso,
+    fecha_inicio: '', tipo: 'cronico', notas: '',
+    numero_factura: '', monto_total_factura: '',
+  })
+
+  // ── Helpers ──
+  const setPac = (k: keyof typeof paciente, v: string) => setPaciente(p => ({ ...p, [k]: v }))
+  const setDirField = (k: keyof typeof dir, v: string) => setDir(d => ({ ...d, [k]: v }))
+  const setTratField = (k: keyof typeof trat, v: string) => setTrat(t => ({ ...t, [k]: v }))
+
+  const coincidencias = useMemo(
+    () => coincidenciasRiesgoEntrega({ canton: dir.canton, distrito: dir.distrito, senas: dir.senas }),
+    [dir.canton, dir.distrito, dir.senas],
+  )
+  const zonaRiesgo = coincidencias.length > 0
+
+  const fechaVencimiento = trat.dosis_diaria && trat.unidades_caja && trat.fecha_inicio
+    ? calcularFechaVencimiento(trat.fecha_inicio, Number(trat.unidades_caja), Number(trat.dosis_diaria))
+    : null
+
+  // ── Effects ──
   useEffect(() => {
     async function cargar() {
       const { data } = await supabase.from('farmacias').select('*').eq('activa', true).order('nombre')
       if (data) setFarmacias(data)
-
-      // Pre-seleccionar farmacia del empleado
       const { data: { user } } = await supabase.auth.getUser()
-      const { data: emp } = await supabase.from('empleados').select('farmacia_id, rol').eq('id', user!.id).single()
-      if (emp?.farmacia_id) setPaciente(p => ({ ...p, farmacia_id: emp.farmacia_id! }))
+      const { data: emp } = await supabase.from('empleados').select('farmacia_id').eq('id', user!.id).single()
+      if (emp?.farmacia_id) setPac('farmacia_id', emp.farmacia_id)
     }
     cargar()
   }, [])
 
-  const coincidenciasRiesgo = useMemo(
-    () => coincidenciasRiesgoEntrega({ canton: cantonCr, distrito: distritoCr, senas: direccionSenas }),
-    [cantonCr, distritoCr, direccionSenas],
-  )
-  const requiereArregloEntrega = coincidenciasRiesgo.length > 0
-
+  // ── Buscar cédula ──
   async function buscarPorCedula() {
-    const cedulaTrim = cedula.trim()
-    if (!cedulaTrim) {
-      toast.error('Ingresa el número de cédula')
-      return
-    }
+    const c = cedula.trim()
+    if (!c) return toast.error('Ingresa el número de cédula')
+    if (!PADRON_API_URL || !PADRON_API_KEY) return toast.error('Faltan variables de entorno del padrón.')
     setLoadingPersona(true)
     try {
-      const base = PERSONA_API_URL.replace(/\/$/, '')
-      const res = await fetch(`${base}/persona/${encodeURIComponent(cedulaTrim)}`)
-      if (!res.ok) {
-        toast.error('No se encontró persona con esa cédula')
-        return
-      }
-      const data: PersonaResponse = await res.json()
-      setPaciente(p => ({ ...p, nombre: data.nombre_completo || '' }))
-      if (data.nombre_completo) toast.success('Nombre cargado')
-    } catch {
-      toast.error('Error al consultar la API de persona. Revisa que el servicio esté en marcha.')
-    } finally {
-      setLoadingPersona(false)
-    }
+      const res = await fetch(PADRON_API_URL, {
+        method: 'POST',
+        headers: { apikey: PADRON_API_KEY, Authorization: `Bearer ${PADRON_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_cedula: /^\d+$/.test(c) ? Number(c) : c }),
+      })
+      if (!res.ok) return toast.error('No se encontró persona con esa cédula')
+      const data = await res.json()
+      const nombre = ((Array.isArray(data) ? data[0] : data) as PersonaResponse)?.nombre_completo?.trim()
+      if (!nombre) return toast.error('No se encontró persona con esa cédula')
+      setPac('nombre', nombre)
+      toast.success('Nombre cargado')
+    } catch { toast.error('Error al consultar el padrón.') }
+    finally { setLoadingPersona(false) }
   }
 
-  const fechaVencimientoPreview =
-    tratamiento.dosis_diaria && tratamiento.unidades_caja && tratamiento.fecha_inicio_tratamiento
-      ? calcularFechaVencimiento(
-          tratamiento.fecha_inicio_tratamiento,
-          Number(tratamiento.unidades_caja),
-          Number(tratamiento.dosis_diaria),
-        )
-      : null
+  // ── Validar ──
+  function validar(): boolean {
+    if (!paciente.empresa.trim()) { toast.error('Selecciona la empresa del paciente.'); return false }
+    if (dir.canton && !dir.distrito) { toast.error('Si eliges cantón, selecciona también el distrito.'); return false }
+    if (dir.distrito && !dir.canton) { toast.error('Selecciona el cantón que corresponde al distrito.'); return false }
+    if (dir.senas.trim() && (!dir.canton || !dir.distrito)) { toast.error('Para agregar señas, completa cantón y distrito.'); return false }
+    if (dir.canton && dir.distrito) {
+      const permitidos = distritosPorProvinciaCanton(dir.provincia, dir.canton)
+      if (!permitidos.includes(dir.distrito)) { toast.error('El distrito no corresponde al cantón seleccionado.'); return false }
+    }
+    if (zonaRiesgo && dir.arreglo.trim().length < MIN_CARACTERES_ARREGLO_ENTREGA) {
+      setModalRiesgoAbierto(true)
+      toast.error(`Zona de riesgo: documente el arreglo acordado (mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres).`)
+      return false
+    }
+    if (trat.medicamentoId) {
+      if (!trat.fecha_inicio.trim()) { toast.error('Indica la fecha de inicio de tratamiento.'); return false }
+      if (!fechaVencimiento) { toast.error('Completa dosis, unidades y fechas del medicamento.'); return false }
+      if (!trat.numero_factura.trim()) { toast.error('El número de factura es obligatorio.'); return false }
+      if (!trat.monto_total_factura.trim()) { toast.error('El monto total de la factura es obligatorio.'); return false }
+      if (parseMontoFacturaInput(trat.monto_total_factura) === null) { toast.error('El monto total de la factura no es válido.'); return false }
+    }
+    return true
+  }
 
+  // ── Submit ──
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
-    if (!paciente.empresa.trim()) {
-      toast.error('Selecciona la empresa del paciente.')
-      return
-    }
-
-    if (cantonCr && !distritoCr) {
-      toast.error('Si eliges cantón, selecciona también el distrito.')
-      return
-    }
-    if (distritoCr && !cantonCr) {
-      toast.error('Selecciona el cantón que corresponde al distrito.')
-      return
-    }
-    if (direccionSenas.trim() && (!cantonCr || !distritoCr)) {
-      toast.error('Para agregar señas o dirección detallada, completa cantón y distrito.')
-      return
-    }
-    if (cantonCr && distritoCr) {
-      const permitidos = distritosPorProvinciaCanton(provinciaCr, cantonCr)
-      if (!permitidos.includes(distritoCr)) {
-        toast.error('El distrito no corresponde al cantón seleccionado. Vuelva a elegir cantón y distrito.')
-        return
-      }
-    }
-
-    const direccionCompuesta =
-      cantonCr && distritoCr
-        ? [
-            `Provincia: ${provinciaCr}`,
-            `Cantón: ${cantonCr}`,
-            `Distrito: ${distritoCr}`,
-            direccionSenas.trim() ? `Señas: ${direccionSenas.trim()}` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-        : null
-
-    const riesgoLugares = coincidenciasRiesgoEntrega({
-      canton: cantonCr,
-      distrito: distritoCr,
-      senas: direccionSenas,
-    })
-    if (riesgoLugares.length > 0) {
-      const doc = arregloEntrega.trim()
-      if (doc.length < MIN_CARACTERES_ARREGLO_ENTREGA) {
-        setModalRiesgoEntregaAbierto(true)
-        toast.error(
-          `Dirección en zona de riesgo para entrega (${riesgoLugares.join(', ')}). Documente el arreglo acordado con el cliente (mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres).`,
-        )
-        return
-      }
-    }
-
-    const conMedicamento = !!tratamiento.medicamentoId.trim()
-    if (conMedicamento) {
-      if (!tratamiento.fecha_inicio_tratamiento.trim()) {
-        toast.error('Indica la fecha de inicio de tratamiento (obligatoria).')
-        return
-      }
-      if (!fechaVencimientoPreview) {
-        toast.error(
-          'Para registrar el medicamento, completa dosis diarias, unidades en la caja, fecha de despacho e inicio de tratamiento.',
-        )
-        return
-      }
-      if (!tratamiento.numero_factura?.trim()) {
-        toast.error('El número de factura es obligatorio.')
-        return
-      }
-      if (!tratamiento.monto_total_factura.trim()) {
-        toast.error('El monto total de la factura es obligatorio.')
-        return
-      }
-      if (parseMontoFacturaInput(tratamiento.monto_total_factura) === null) {
-        toast.error('El monto total de la factura no es válido.')
-        return
-      }
-    }
-
+    if (!validar()) return
     setLoading(true)
-
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      const direccionCompuesta = dir.canton && dir.distrito
+        ? [`Provincia: ${dir.provincia}`, `Cantón: ${dir.canton}`, `Distrito: ${dir.distrito}`, dir.senas.trim() ? `Señas: ${dir.senas.trim()}` : null].filter(Boolean).join(' · ')
+        : null
 
-      // 1. Crear paciente
-      const payload = {
-        nombre: paciente.nombre,
-        telefono: paciente.telefono,
+      const { data: nuevo, error: errPac } = await supabase.from('pacientes').insert({
+        ...paciente,
         email: paciente.email || null,
         direccion: direccionCompuesta,
-        provincia_cr: cantonCr && distritoCr ? provinciaCr : null,
-        canton_cr: cantonCr || null,
-        distrito_cr: distritoCr || null,
-        direccion_senas: direccionSenas.trim() || null,
-        arreglo_entrega: riesgoLugares.length > 0 ? arregloEntrega.trim() : null,
-        empresa: paciente.empresa || null,
+        provincia_cr: dir.canton && dir.distrito ? dir.provincia : null,
+        canton_cr: dir.canton || null,
+        distrito_cr: dir.distrito || null,
+        direccion_senas: dir.senas.trim() || null,
+        arreglo_entrega: zonaRiesgo ? dir.arreglo.trim() : null,
+        notas: paciente.notas || null,
         seguro_medico: paciente.seguro_medico || null,
         tipo_pago: paciente.tipo_pago || null,
-        farmacia_id: paciente.farmacia_id,
-        notas: paciente.notas || null,
+        empresa: paciente.empresa || null,
         registrado_por: user!.id,
-      }
-      const { data: nuevoPaciente, error: errPaciente } = await supabase
-        .from('pacientes')
-        .insert(payload)
-        .select()
-        .single()
+      }).select().single()
+      if (errPac) throw errPac
 
-      if (errPaciente) throw errPaciente
-
-      // 2. Crear primer tratamiento si se llenó
-      if (tratamiento.medicamentoId && fechaVencimientoPreview) {
-        const { data: nuevoTrat, error: errTrat } = await supabase
-          .from('tratamientos')
-          .insert({
-            paciente_id: nuevoPaciente.id,
-            medicamento_id: tratamiento.medicamentoId,
-            medicamento: tratamiento.medicamento,
-            marca: tratamiento.marca || null,
-            concentracion: tratamiento.concentracion || null,
-            dosis_diaria: Number(tratamiento.dosis_diaria),
-            unidades_caja: Number(tratamiento.unidades_caja),
-            fecha_surtido: tratamiento.fecha_surtido,
-            fecha_inicio_tratamiento: tratamiento.fecha_inicio_tratamiento,
-            fecha_vencimiento: fechaVencimientoPreview,
-            tipo: tratamiento.tipo,
-            notas: tratamiento.notas || null,
-            registrado_por: user!.id,
-          })
-          .select('id')
-          .single()
-
+      if (trat.medicamentoId && fechaVencimiento) {
+        const { data: nuevoTrat, error: errTrat } = await supabase.from('tratamientos').insert({
+          paciente_id: nuevo.id,
+          medicamento_id: trat.medicamentoId,
+          medicamento: trat.medicamento,
+          marca: trat.marca || null,
+          concentracion: trat.concentracion || null,
+          dosis_diaria: Number(trat.dosis_diaria),
+          unidades_caja: Number(trat.unidades_caja),
+          fecha_surtido: trat.fecha_surtido,
+          fecha_inicio_tratamiento: trat.fecha_inicio,
+          fecha_vencimiento: fechaVencimiento,
+          tipo: trat.tipo,
+          notas: trat.notas || null,
+          registrado_por: user!.id,
+        }).select('id').single()
         if (errTrat) throw errTrat
 
-        const factura = tratamiento.numero_factura.trim()
-        const montoIns = parseMontoFacturaInput(tratamiento.monto_total_factura)
-        if (montoIns === null) {
-          await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
-          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
-          throw new Error('Monto de factura inválido')
-        }
+        const monto = parseMontoFacturaInput(trat.monto_total_factura)
         const { data: emp } = await supabase.from('empleados').select('farmacia_id').eq('id', user!.id).single()
-        const farmaciaId = emp?.farmacia_id ?? nuevoPaciente.farmacia_id
-        if (!farmaciaId) {
+        const farmaciaId = emp?.farmacia_id ?? nuevo.farmacia_id
+        if (!monto || !farmaciaId) {
           await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
-          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
-          throw new Error('No se pudo determinar la farmacia para guardar datos de factura')
+          await supabase.from('pacientes').delete().eq('id', nuevo.id)
+          throw new Error(!monto ? 'Monto inválido' : 'No se pudo determinar la farmacia')
         }
         const { error: errRen } = await supabase.from('renovaciones').insert({
-          tratamiento_id: nuevoTrat.id,
-          farmacia_id: farmaciaId,
-          empleado_id: user!.id,
-          fecha: tratamiento.fecha_surtido,
-          fecha_inicio_tratamiento: tratamiento.fecha_inicio_tratamiento,
-          notas: null,
-          numero_factura: factura,
-          monto_total_factura: montoIns,
-          hubo_regalia: false,
-          unidades_regalia: null,
+          tratamiento_id: nuevoTrat.id, farmacia_id: farmaciaId, empleado_id: user!.id,
+          fecha: trat.fecha_surtido, fecha_inicio_tratamiento: trat.fecha_inicio,
+          notas: null, numero_factura: trat.numero_factura.trim(),
+          monto_total_factura: monto, hubo_regalia: false, unidades_regalia: null,
         })
         if (errRen) {
           await supabase.from('tratamientos').delete().eq('id', nuevoTrat.id)
-          await supabase.from('pacientes').delete().eq('id', nuevoPaciente.id)
+          await supabase.from('pacientes').delete().eq('id', nuevo.id)
           throw errRen
         }
       }
 
       toast.success('Paciente registrado exitosamente')
-      router.push(`/pacientes/${nuevoPaciente.id}`)
+      router.push(`/pacientes/${nuevo.id}`)
     } catch (err: any) {
       toast.error('Error al registrar: ' + err.message)
     } finally {
@@ -306,6 +219,7 @@ export default function NuevoPacientePage() {
     }
   }
 
+  // ─── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -314,295 +228,208 @@ export default function NuevoPacientePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Datos del Paciente */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-800 mb-4">👤 Datos del paciente</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 flex gap-2 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-                <input type="text" value={cedula} onChange={e => setCedula(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarPorCedula())}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ej: 208750176" />
-              </div>
-              <button type="button" onClick={buscarPorCedula} disabled={loadingPersona}
-                className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-400 text-white font-medium rounded-xl transition-colors whitespace-nowrap">
-                {loadingPersona ? 'Buscando...' : 'Buscar nombre'}
-              </button>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
-              <input type="text" required value={paciente.nombre} onChange={e => setPaciente(p => ({ ...p, nombre: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Nombre Apellido o buscar por cédula" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono / WhatsApp *</label>
-              <input type="tel" required value={paciente.telefono} onChange={e => setPaciente(p => ({ ...p, telefono: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="5512345678" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input type="email" value={paciente.email} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="correo@ejemplo.com" />
-            </div>
-            <div className="col-span-2 border-t border-gray-100 pt-4 mt-1">
-              <p className="text-sm font-medium text-gray-800 mb-3">Dirección en Costa Rica</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
-                  <ListaDesplegableAbajo
-                    permitirVacio={false}
-                    value={provinciaCr}
-                    onValueChange={(v) => {
-                      setProvinciaCr(v)
-                      setCantonCr('')
-                      setDistritoCr('')
-                    }}
-                    opciones={PROVINCIAS_CR.map((p) => ({ value: p, label: p }))}
-                    placeholder={PROVINCIAS_CR[0]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantón</label>
-                  <ListaDesplegableAbajo
-                    value={cantonCr}
-                    onValueChange={(c) => {
-                      setCantonCr(c)
-                      setDistritoCr('')
-                    }}
-                    opciones={cantonesPorProvincia(provinciaCr).map((c) => ({ value: c, label: c }))}
-                    placeholder="Seleccionar cantón…"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
-                  <ListaDesplegableAbajo
-                    value={distritoCr}
-                    onValueChange={setDistritoCr}
-                    opciones={distritosPorProvinciaCanton(provinciaCr, cantonCr).map((d) => ({
-                      value: d,
-                      label: d,
-                    }))}
-                    placeholder={cantonCr ? 'Seleccionar distrito…' : 'Primero elija cantón'}
-                    disabled={!cantonCr}
-                  />
-                </div>
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Señas / detalle (opcional)</label>
-                <input
-                  type="text"
-                  value={direccionSenas}
-                  onChange={(e) => setDireccionSenas(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Ej: de la esquina del parque, 200 m norte, casa azul"
-                />
-              </div>
-              {requiereArregloEntrega ? (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                    Zona de riesgo para entrega
-                  </p>
-                  <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
-                    Coincidencias: {coincidenciasRiesgo.join(', ')}. Coordine con el cliente un punto seguro (trabajo,
-                    punto medio u otro acuerdo) y regístrelo aquí.
-                  </p>
-                  <label htmlFor="arreglo-entrega-paciente" className="mt-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
-                    Arreglo de entrega <span className="text-red-600">*</span>
-                  </label>
-                  <textarea
-                    id="arreglo-entrega-paciente"
-                    value={arregloEntrega}
-                    onChange={(e) => setArregloEntrega(e.target.value)}
-                    rows={3}
-                    required={requiereArregloEntrega}
-                    className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:border-amber-800 dark:bg-slate-900 dark:text-slate-100"
-                    placeholder="Ej: entrega acordada en oficinas del Hospital México, recepción, lunes a viernes 9–17 h"
-                  />
-                  <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
-                    Mínimo {MIN_CARACTERES_ARREGLO_ENTREGA} caracteres. Obligatorio mientras la dirección siga en zona de
-                    riesgo.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Empresa <span className="text-red-600">*</span>
-              </label>
-              <EmpresaCombobox
-                required
-                value={paciente.empresa}
-                onValueChange={(empresa) => setPaciente((p) => ({ ...p, empresa }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Seguro médico *</label>
-              <select value={paciente.seguro_medico} onChange={e => setPaciente(p => ({ ...p, seguro_medico: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
-                <option value="">Seleccionar...</option>
-                {SEGUROS_MEDICOS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de pago</label>
-              <select value={paciente.tipo_pago} onChange={e => setPaciente(p => ({ ...p, tipo_pago: e.target.value as '' | 'directo' | 'reembolso' }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
-                <option value="">Seleccionar...</option>
-                <option value="directo">Directo</option>
-                <option value="reembolso">Reembolso</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Farmacia asignada *</label>
-              <select required value={paciente.farmacia_id} onChange={e => setPaciente(p => ({ ...p, farmacia_id: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
-                <option value="">Seleccionar farmacia...</option>
-                {farmacias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notas / preferencias (opcional)</label>
-              <input
-                type="text"
-                value={paciente.notas}
-                onChange={e => setPaciente(p => ({ ...p, notas: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: El cliente prefiere que lo llamen por teléfono; prefiere contacto por WhatsApp"
-              />
-            </div>
+
+        {/* ── Datos del paciente ── */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 grid grid-cols-2 gap-4">
+          <h2 className="col-span-2 font-semibold text-gray-800">👤 Datos del paciente</h2>
+
+          {/* Cédula */}
+          <div className="col-span-2 flex gap-2 items-end">
+            <Field label="Cédula" required>
+              <input className={INPUT_CLS} value={cedula} placeholder="Ej: 208750176"
+                onChange={e => setCedula(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarPorCedula())} />
+            </Field>
+            <button type="button" onClick={buscarPorCedula} disabled={loadingPersona}
+              className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-400 text-white font-medium rounded-xl transition-colors whitespace-nowrap">
+              {loadingPersona ? 'Buscando...' : 'Buscar nombre'}
+            </button>
           </div>
-        </div>
 
-        {/* Primer Tratamiento */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">💊 Primer tratamiento</h2>
-          <p className="text-sm text-gray-400 mb-4">Opcional. Registra medicamento, dosis y fechas para el seguimiento en el dashboard.</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <MedicamentoCombobox
-                medicamentoId={tratamiento.medicamentoId}
-                onMedicamentoChange={(row) => {
-                  if (!row) {
-                    setTratamiento((t) => ({
-                      ...t,
-                      medicamentoId: '',
-                      medicamento: '',
-                      marca: '',
-                      concentracion: '',
-                    }))
-                    return
-                  }
-                  setTratamiento((t) => ({
-                    ...t,
-                    medicamentoId: row.id,
-                    medicamento: textoMedicamentoParaReceta(row),
-                    marca: row.marca ?? '',
-                    concentracion: row.concentracion ?? '',
-                  }))
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-              <input type="text" value={tratamiento.marca} onChange={e => setTratamiento(t => ({ ...t, marca: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ej: Genérico, Roemmers" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Concentración</label>
-              <input type="text" value={tratamiento.concentracion} onChange={e => setTratamiento(t => ({ ...t, concentracion: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ej: 500mg, 20mg" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unidades en la caja</label>
-              <input type="number" min="1" value={tratamiento.unidades_caja} onChange={e => setTratamiento(t => ({ ...t, unidades_caja: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="30" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dosis diaria (unidades/día)</label>
-              <input type="number" min="0.5" step="0.5" value={tratamiento.dosis_diaria} onChange={e => setTratamiento(t => ({ ...t, dosis_diaria: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="1" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de despacho (farmacia)</label>
-              <input
-                type="date"
-                value={tratamiento.fecha_surtido}
-                onChange={(e) => setTratamiento((t) => ({ ...t, fecha_surtido: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">Fecha en que se despacha el medicamento en la farmacia.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Inicio de tratamiento (toma) *</label>
-              <input
-                type="date"
-                value={tratamiento.fecha_inicio_tratamiento}
-                onChange={(e) => setTratamiento((t) => ({ ...t, fecha_inicio_tratamiento: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Obligatoria si registras un medicamento: debe ser indicada por el personal; no se precarga.
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de tratamiento</label>
-              <select value={tratamiento.tipo} onChange={e => setTratamiento(t => ({ ...t, tipo: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
-                <option value="cronico">Crónico (permanente)</option>
-                <option value="temporal">Temporal (con fecha fin)</option>
-              </select>
-            </div>
-            <div className="col-span-2 grid gap-4 sm:grid-cols-2">
+          <div className="col-span-2">
+            <Field label="Nombre completo" required>
+              <input className={INPUT_CLS} required value={paciente.nombre} placeholder="Nombre o buscar por cédula"
+                onChange={e => setPac('nombre', e.target.value)} />
+            </Field>
+          </div>
+
+          <Field label="Teléfono / WhatsApp" required>
+            <input className={INPUT_CLS} type="tel" required value={paciente.telefono} placeholder="88881234"
+              onChange={e => setPac('telefono', e.target.value)} />
+          </Field>
+
+          <Field label="Email">
+            <input className={INPUT_CLS} type="email" value={paciente.email} placeholder="correo@ejemplo.com"
+              onChange={e => setPac('email', e.target.value)} />
+          </Field>
+
+          {/* Dirección */}
+          <div className="col-span-2 border-t border-gray-100 pt-4">
+            <p className="text-sm font-medium text-gray-800 mb-3">Dirección en Costa Rica</p>
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de factura <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={tratamiento.numero_factura}
-                  onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Según inventario / POS de la farmacia"
-                  autoComplete="off"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                <ListaDesplegableAbajo permitirVacio={false} value={dir.provincia}
+                  onValueChange={v => setDir(d => ({ ...d, provincia: v, canton: '', distrito: '' }))}
+                  opciones={PROVINCIAS_CR.map(p => ({ value: p, label: p }))} placeholder={PROVINCIAS_CR[0]} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monto total factura (CRC) <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={tratamiento.monto_total_factura}
-                  onChange={(e) => setTratamiento((t) => ({ ...t, monto_total_factura: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Ej: 12500 o 12500,50"
-                  autoComplete="off"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cantón</label>
+                <ListaDesplegableAbajo value={dir.canton}
+                  onValueChange={c => setDir(d => ({ ...d, canton: c, distrito: '' }))}
+                  opciones={cantonesPorProvincia(dir.provincia).map(c => ({ value: c, label: c }))}
+                  placeholder="Seleccionar cantón…" />
               </div>
-              <p className="col-span-2 text-xs text-gray-500">
-                Obligatorios si registras un medicamento: se guarda el despacho en historial.
-              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Distrito</label>
+                <ListaDesplegableAbajo value={dir.distrito} onValueChange={v => setDirField('distrito', v)}
+                  opciones={distritosPorProvinciaCanton(dir.provincia, dir.canton).map(d => ({ value: d, label: d }))}
+                  placeholder={dir.canton ? 'Seleccionar distrito…' : 'Primero elija cantón'} disabled={!dir.canton} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <Field label="Señas / detalle (opcional)">
+                <input className={INPUT_CLS} value={dir.senas} placeholder="Ej: 200 m norte del parque, casa azul"
+                  onChange={e => setDirField('senas', e.target.value)} />
+              </Field>
             </div>
 
-            {/* Preview fecha de vencimiento */}
-            {fechaVencimientoPreview && (
-              <div className="col-span-2 bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-green-700 text-sm font-medium">
-                  ✅ Fecha de vencimiento calculada: <strong>{fechaVencimientoPreview}</strong>
+            {zonaRiesgo && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4">
+                <p className="text-sm font-semibold text-amber-900">Zona de riesgo para entrega</p>
+                <p className="mt-1 text-xs text-amber-900/90">
+                  Coincidencias: {coincidencias.join(', ')}. Coordine un punto seguro y regístrelo aquí.
                 </p>
-                <p className="text-green-600 text-xs mt-1">
-                  El vencimiento cuenta desde la fecha de inicio de tratamiento. El dashboard usará esta fecha para el seguimiento.
-                </p>
+                <Field label="Arreglo de entrega" required hint={`Mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres.`}>
+                  <textarea id="arreglo-entrega-paciente" rows={3} required value={dir.arreglo}
+                    onChange={e => setDirField('arreglo', e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="Ej: entrega en oficinas del Hospital México, recepción, lunes a viernes 9–17 h" />
+                </Field>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Buttons */}
+          {/* Empresa / seguro / pago */}
+          <div>
+            <Field label="Empresa" required>
+              <EmpresaCombobox required value={paciente.empresa}
+                onValueChange={v => setPac('empresa', v)} />
+            </Field>
+          </div>
+
+          <Field label="Seguro médico">
+            <select className={`${INPUT_CLS} bg-white`} value={paciente.seguro_medico}
+              onChange={e => setPac('seguro_medico', e.target.value)}>
+              <option value="">Seleccionar...</option>
+              {SEGUROS_MEDICOS.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Tipo de pago">
+            <select className={`${INPUT_CLS} bg-white`} value={paciente.tipo_pago}
+              onChange={e => setPac('tipo_pago', e.target.value as typeof paciente.tipo_pago)}>
+              <option value="">Seleccionar...</option>
+              <option value="directo">Directo</option>
+              <option value="reembolso">Reembolso</option>
+            </select>
+          </Field>
+
+          <div className="col-span-2">
+            <Field label="Farmacia asignada" required>
+              <select required className={`${INPUT_CLS} bg-white`} value={paciente.farmacia_id}
+                onChange={e => setPac('farmacia_id', e.target.value)}>
+                <option value="">Seleccionar farmacia...</option>
+                {farmacias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <div className="col-span-2">
+            <Field label="Notas / preferencias (opcional)">
+              <input className={INPUT_CLS} value={paciente.notas}
+                placeholder="Ej: prefiere contacto por WhatsApp"
+                onChange={e => setPac('notas', e.target.value)} />
+            </Field>
+          </div>
+        </section>
+
+        {/* ── Primer tratamiento ── */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <h2 className="font-semibold text-gray-800">Primer tratamiento</h2>
+            <p className="text-sm text-gray-400">Opcional. Para seguimiento en el dashboard.</p>
+          </div>
+
+          <div className="col-span-2">
+            <MedicamentoCombobox medicamentoId={trat.medicamentoId}
+              onMedicamentoChange={row => setTrat(t => !row
+                ? { ...t, medicamentoId: '', medicamento: '', marca: '', concentracion: '' }
+                : { ...t, medicamentoId: row.id, medicamento: textoMedicamentoParaReceta(row), marca: row.marca ?? '', concentracion: row.concentracion ?? '' }
+              )} />
+          </div>
+
+          <Field label="Marca">
+            <input className={INPUT_CLS} value={trat.marca} placeholder="Ej: Genérico"
+              onChange={e => setTratField('marca', e.target.value)} />
+          </Field>
+
+          <Field label="Concentración">
+            <input className={INPUT_CLS} value={trat.concentracion} placeholder="Ej: 500mg"
+              onChange={e => setTratField('concentracion', e.target.value)} />
+          </Field>
+
+          <Field label="Unidades en la caja">
+            <input className={INPUT_CLS} type="number" min="1" value={trat.unidades_caja} placeholder="30"
+              onChange={e => setTratField('unidades_caja', e.target.value)} />
+          </Field>
+
+          <Field label="Dosis diaria (unidades/día)">
+            <input className={INPUT_CLS} type="number" min="0.5" step="0.5" value={trat.dosis_diaria} placeholder="1"
+              onChange={e => setTratField('dosis_diaria', e.target.value)} />
+          </Field>
+
+          <Field label="Fecha de despacho" hint="Fecha en que se despacha en la farmacia.">
+            <input className={INPUT_CLS} type="date" value={trat.fecha_surtido}
+              onChange={e => setTratField('fecha_surtido', e.target.value)} />
+          </Field>
+
+          <Field label="Inicio de tratamiento" required hint="Obligatoria si registras un medicamento.">
+            <input className={INPUT_CLS} type="date" value={trat.fecha_inicio}
+              onChange={e => setTratField('fecha_inicio', e.target.value)} />
+          </Field>
+
+          <Field label="Tipo de tratamiento">
+            <select className={`${INPUT_CLS} bg-white`} value={trat.tipo}
+              onChange={e => setTratField('tipo', e.target.value)}>
+              <option value="cronico">Crónico (permanente)</option>
+              <option value="temporal">Temporal (con fecha fin)</option>
+            </select>
+          </Field>
+
+          <Field label="Número de factura" required>
+            <input className={INPUT_CLS} value={trat.numero_factura} autoComplete="off"
+              placeholder="Según inventario / POS" onChange={e => setTratField('numero_factura', e.target.value)} />
+          </Field>
+
+          <Field label="Monto total factura (CRC)" required>
+            <input className={INPUT_CLS} inputMode="decimal" value={trat.monto_total_factura} autoComplete="off"
+              placeholder="Ej: 12500 o 12500,50" onChange={e => setTratField('monto_total_factura', e.target.value)} />
+          </Field>
+
+          <p className="col-span-2 text-xs text-gray-500">Obligatorios si registras un medicamento.</p>
+
+          {fechaVencimiento && (
+            <div className="col-span-2 bg-green-50 border border-green-200 rounded-xl p-4">
+              <p className="text-green-700 text-sm font-medium">
+                ✅ Fecha de vencimiento calculada: <strong>{fechaVencimiento}</strong>
+              </p>
+              <p className="text-green-600 text-xs mt-1">Calculada desde la fecha de inicio de tratamiento.</p>
+            </div>
+          )}
+        </section>
+
+        {/* ── Botones ── */}
         <div className="flex gap-3">
           <button type="button" onClick={() => router.back()}
             className="flex-1 border border-gray-300 text-gray-700 font-medium py-3 rounded-xl hover:bg-gray-50 transition">
@@ -615,16 +442,12 @@ export default function NuevoPacientePage() {
         </div>
       </form>
 
-      <ModalAlertaRiesgoEntrega
-        open={modalRiesgoEntregaAbierto}
-        onOpenChange={(open) => {
-          setModalRiesgoEntregaAbierto(open)
-          if (!open) {
-            requestAnimationFrame(() => document.getElementById('arreglo-entrega-paciente')?.focus())
-          }
+      <ModalAlertaRiesgoEntrega open={modalRiesgoAbierto}
+        onOpenChange={open => {
+          setModalRiesgoAbierto(open)
+          if (!open) requestAnimationFrame(() => document.getElementById('arreglo-entrega-paciente')?.focus())
         }}
-        coincidencias={coincidenciasRiesgo}
-      />
+        coincidencias={coincidencias} />
     </div>
   )
 }

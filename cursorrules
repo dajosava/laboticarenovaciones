@@ -1,0 +1,107 @@
+# Project Rules for Cursor Agent (FarmaRenovar)
+
+## Stack
+- Framework: Next.js 16+ (App Router)
+- Language: TypeScript (strict mode)
+- Database: Supabase (PostgreSQL)
+- Styling: Tailwind CSS
+- Notifications: Sonner (toast)
+- Forms: React controlled components (react-hook-form disponible, pero este proyecto privilegia formularios controlados)
+
+---
+
+## Code Style
+
+### State Management
+- Group related state into single objects instead of multiple useState calls
+  - ✅ `const [paciente, setPaciente] = useState({ nombre: '', telefono: '' })`
+  - ❌ `const [nombre, setNombre] = useState('')` + `const [telefono, setTelefono] = useState('')`
+- Use helper updaters to avoid repetition:
+  ```ts
+  const setPac = (k: keyof typeof paciente, v: string) =>
+    setPaciente(p => ({ ...p, [k]: v }))
+  ```
+
+### Constants
+- Extract repeated Tailwind class strings as constants at the top of the file
+  ```ts
+  const INPUT_CLS = 'w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500'
+  ```
+- Extract static data arrays (options, configs) outside the component
+
+### Components
+- Create small reusable wrapper components for repeated patterns (Field, Card, Section)
+- Keep components under 200 lines. If longer, split into subcomponents
+- Co-locate subcomponents in the same file if used only once; move to /components if reused
+
+### Validation
+- Extract all form validation logic into a dedicated `validar()` function
+- Return `boolean` from validation functions, use `toast.error()` for user feedback
+- Never mix validation logic inside handleSubmit
+
+### Supabase
+- Always handle errors explicitly: `if (error) throw error`
+- Use `.single()` when expecting one row
+- On multi-step inserts (e.g. paciente → tratamiento → renovacion), rollback previous inserts on failure
+- Never expose service role keys on the client
+
+### TypeScript
+- Always type API responses with interfaces
+- Avoid `any` — use `unknown` and narrow with type guards
+- Use `as const` for static option arrays
+
+---
+
+## File Structure Conventions
+```
+/src/app              → Pages (App Router)
+/src/components       → Reusable UI components
+  /ui                 → Generic primitives (Field, Button, Card)
+  /pacientes          → Domain-specific components
+  /medicamentos       → Domain-specific components
+/src/lib              → Utilities, Supabase client, helpers
+/src/types            → Shared TypeScript interfaces
+/src/hooks            → Custom React hooks
+/supabase/migrations  → SQL migrations del esquema
+```
+
+---
+
+## Refactor Priorities (apply to every file you touch)
+
+1. **Consolidate useState** — merge related fields into objects
+2. **Extract INPUT_CLS and repeated classNames** — define once at top
+3. **Create Field wrapper** — label + input + hint in one component
+4. **Move validation out of handleSubmit** — into a `validar()` function
+5. **Replace magic strings** — move to constants or enums
+6. **Split long JSX sections** — dirección, tratamiento, etc. as named sub-sections
+7. **Remove dead code** — unused imports, variables, commented blocks
+
+---
+
+## Naming Conventions
+- Components: PascalCase (`NuevoPacientePage`)
+- Hooks: camelCase with `use` prefix (`useFarmacias`)
+- Utilities: camelCase (`calcularFechaVencimiento`)
+- Database columns: snake_case (matches Supabase schema)
+- TypeScript interfaces: PascalCase (`PersonaResponse`)
+- Server actions: archivos `actions.ts` por feature (`/src/app/(app)/**/actions.ts`)
+
+---
+
+## What NOT to do
+- ❌ Don't use `<form>` submit with page reload — always `e.preventDefault()`
+- ❌ Don't use `innerHTML` or `dangerouslySetInnerHTML`
+- ❌ Don't fetch data directly in JSX — use useEffect or server components
+- ❌ Don't hardcode Supabase URLs — use environment variables
+- ❌ Don't hardcode external padron endpoints/keys — use `NEXT_PUBLIC_SUPABASE_URL_PADRON` y `NEXT_PUBLIC_SUPABASE_ANON_KEY_PADRON`
+- ❌ Don't use default exports for utilities — use named exports
+- ❌ Don't nest ternaries more than 2 levels deep
+
+---
+
+## When refactoring a file, always:
+1. Preserve existing functionality 100% — no behavior changes
+2. Keep the same props interface for components
+3. Keep the same Supabase table/column names
+4. Run through: state consolidation → constants → Field wrapper → validar() → JSX cleanup
