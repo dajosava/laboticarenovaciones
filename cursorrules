@@ -62,7 +62,8 @@
 /src/lib              → Utilities, Supabase client, helpers
 /src/types            → Shared TypeScript interfaces
 /src/hooks            → Custom React hooks
-/supabase/migrations  → SQL migrations del esquema
+/supabase/migrations     → SQL migrations del esquema (BD app FarmaRenovar)
+/supabase/migrations/padron → SQL para el proyecto Supabase del PADRÓN (ejecutar manualmente allí; ver INSTRUCTIONS.txt)
 ```
 
 ---
@@ -105,3 +106,24 @@
 2. Keep the same props interface for components
 3. Keep the same Supabase table/column names
 4. Run through: state consolidation → constants → Field wrapper → validar() → JSX cleanup
+
+---
+
+## Testing
+
+Stack: **Vitest** + **jsdom** (`vitest.config.ts`, `vitest.setup.ts`).
+
+```bash
+npm run test:run   # CI / una ejecución
+npm test           # watch en desarrollo
+```
+
+Al escribir o pedir tests (unitarios, componentes, integración, e2e), **leer y seguir** el skill:
+
+`.cursor/skills/testing-react-next/SKILL.md`
+
+La regla `.cursor/rules/testing.mdc` se activa al editar `*.test.*`, `*.spec.*` o `e2e/`.
+
+**Suite actual:** `src/lib/utils/index.test.ts` — utilidades del dashboard (fechas, bandas KPI, prioridad). Sin tests de componentes ni e2e aún.
+
+**Convenciones:** tests colocados junto al fuente (`*.test.tsx`); factories en skill `references/farmarenovar-domain.md`; reutilizar `src/lib/mock/data.ts` y `src/types/index.ts`.

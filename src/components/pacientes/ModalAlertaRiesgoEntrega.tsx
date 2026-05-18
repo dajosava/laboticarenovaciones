@@ -15,7 +15,7 @@ export default function ModalAlertaRiesgoEntrega({ open, onOpenChange, coinciden
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[300] bg-black/50" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 z-[301] w-[min(100vw-1.5rem,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-200 bg-white p-6 shadow-xl focus:outline-none dark:border-amber-900/60 dark:bg-slate-900"
+          className="fixed left-1/2 top-1/2 z-[301] w-[min(100vw-1.5rem,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-2 border-orange-500 bg-white p-6 shadow-xl ring-1 ring-orange-500/25 focus:outline-none dark:border-amber-500 dark:bg-slate-900 dark:ring-amber-500/30"
         >
           <Dialog.Description className="sr-only">
             La dirección incluye un cantón, distrito o referencia asociada a zona de riesgo para entrega. Debe

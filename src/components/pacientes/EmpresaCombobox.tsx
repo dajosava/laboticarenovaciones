@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabaseBrowser } from '@/lib/supabase/use-supabase-browser'
 import { cn } from '@/lib/utils'
 
 type EmpresaRow = {
@@ -20,7 +20,7 @@ const inputBase =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
 
 export default function EmpresaCombobox({ value, onValueChange, required, disabled }: Props) {
-  const supabase = createClient()
+  const supabase = useSupabaseBrowser()
   const wrapRef = useRef<HTMLDivElement>(null)
   const [q, setQ] = useState('')
   const [abierto, setAbierto] = useState(false)
@@ -28,16 +28,16 @@ export default function EmpresaCombobox({ value, onValueChange, required, disabl
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([])
 
   useEffect(() => {
-    let ok = true
+    let activo = true
     ;(async () => {
       setCargando(true)
       const { data } = await supabase.from('empresas_catalogo').select('id, nombre').eq('activa', true).order('nombre')
-      if (!ok) return
+      if (!activo) return
       setEmpresas((data ?? []) as EmpresaRow[])
       setCargando(false)
     })()
     return () => {
-      ok = false
+      activo = false
     }
   }, [supabase])
 

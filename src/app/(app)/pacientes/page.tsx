@@ -2,7 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import type { Paciente } from '@/types'
 import Link from 'next/link'
-import { formatearFechaCorta } from '@/lib/utils'
+import { formatearFechaCorta, normalizarNombrePersona } from '@/lib/utils'
+
+function mostrarNombrePaciente(p: Paciente): string {
+  const c = p.clasificacion_alta
+  if (c === 'menor' || c === 'extranjero' || c === 'no_listado_cr') {
+    return normalizarNombrePersona(p.nombre)
+  }
+  return p.nombre
+}
 
 export default async function PacientesPage({
   searchParams,
@@ -113,9 +121,9 @@ export default async function PacientesPage({
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-700">
-                      {p.nombre.charAt(0)}
+                      {mostrarNombrePaciente(p).charAt(0)}
                     </div>
-                    <span className="font-medium text-gray-900">{p.nombre}</span>
+                    <span className="font-medium text-gray-900">{mostrarNombrePaciente(p)}</span>
                   </div>
                 </td>
                 <td className="px-5 py-4 text-gray-600">{p.telefono}</td>

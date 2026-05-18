@@ -125,6 +125,24 @@ export const etiquetasUrgencia: Record<NivelUrgencia, string> = {
   ok: '🟢 Al día',
 }
 
+/** Nombre de persona en mayúsculas (mismo criterio que el padrón nacional). */
+export function normalizarNombrePersona(nombre: string): string {
+  const t = nombre.trim().replace(/\s+/g, ' ')
+  return t ? t.toLocaleUpperCase('es-CR') : ''
+}
+
+/** Edad en años completos a partir de una fecha ISO (yyyy-MM-dd). */
+export function edadDesdeFechaNacimiento(isoDate: string): number | null {
+  if (!isoDate.trim()) return null
+  const birth = new Date(`${isoDate.trim().slice(0, 10)}T12:00:00`)
+  if (Number.isNaN(birth.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 // ─── Formateo de fechas en español ───────────
 export function formatearFecha(fecha: string): string {
   return format(parseISO(fecha), "d 'de' MMMM yyyy", { locale: es })

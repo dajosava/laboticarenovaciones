@@ -1,0 +1,37 @@
+Estas migraciones NO se aplican al proyecto Supabase de FarmaRenovar (app).
+
+Se ejecutan manualmente en el proyecto Supabase del PADRÓN (el que expone el RPC buscar_persona_por_cedula y la tabla public.padron).
+
+Esquema típico original: cedula PK; nombre, papellido, sapellido NOT NULL; nombre_completo GENERATED (concat).
+El 001 convierte nombre_completo a columna guardada para que la API pueda insertar filas (menores/extranjeros) sin violar columnas generadas.
+
+Pasos sugeridos:
+1. Abre el SQL Editor del proyecto Padrón en Supabase (modo de escritura normal).
+2. Copia y ejecuta los archivos .sql de esta carpeta en orden numérico (001, 002, ...).
+3. En el proyecto Padrón, crea la clave "service_role" en Settings → API y configúrala en el servidor de FarmaRenovar como SUPABASE_SERVICE_ROLE_KEY_PADRON (nunca como NEXT_PUBLIC).
+
+El comando `supabase db push` del repo principal no incluye esta carpeta por defecto.
+
+--- Error 25006: "cannot execute ALTER TABLE in a read-only transaction" ---
+
+Significa que la sesión que ejecuta el SQL está en modo SOLO LECTURA. No es por el contenido del 001 (ya no usa bloques DO).
+
+Revisa en este orden:
+
+1) Estado del proyecto (Padrón)
+   - Dashboard: avisos de pausa, facturación, disco al 100 % o base en solo lectura.
+   - Tras quedarse sin espacio, a veces hace falta subir disco y esperar a que el proyecto vuelva a escritura normal.
+
+2) SQL Editor
+   - Ejecuta el script en TROZOS (varios Run): primero solo el bloque ADD COLUMN id, luego DROP CONSTRAINT, luego ADD PRIMARY KEY, etc.
+   - Evita ejecutar contra una réplica o rama marcada como read-only (poco habitual).
+
+3) Workaround recomendado: psql con URI del panel (escritura directa)
+   - Settings → Database → Connection string → URI (modo directo o Session pooler).
+   - Evita el "Transaction pooler" para DDL largos si ves comportamientos raros.
+   - En tu PC (con psql instalado), desde la carpeta del repo:
+
+     psql "PEGAR_URI_CON_PASSWORD" -f supabase/migrations/padron/001_extend_public_padron.sql
+
+4) Si la PK no se llama padron_pkey
+   - Usa la consulta en comentarios dentro de 001_extend_public_padron.sql para ver el nombre real y haz DROP CONSTRAINT manual con ese nombre.

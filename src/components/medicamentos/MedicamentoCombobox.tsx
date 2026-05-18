@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabaseBrowser } from '@/lib/supabase/use-supabase-browser'
 import { etiquetaMedicamentoCatalogo } from '@/lib/medicamentos-import'
 import { fetchMedicamentosAdminList } from '@/lib/medicamentos-admin-query'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,7 @@ export default function MedicamentoCombobox({
   rolEmpleado,
   className,
 }: Props) {
-  const supabase = createClient()
+  const supabase = useSupabaseBrowser()
   const [lista, setLista] = useState<MedicamentoCatalogoRow[]>([])
   const [cargando, setCargando] = useState(true)
   const [rolDetectado, setRolDetectado] = useState<Rol | null>(rolEmpleado ?? null)

@@ -11,15 +11,17 @@ export default function Header() {
   const isHome = pathname === '/dashboard'
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200/80 bg-white/95 px-6 shadow-sm backdrop-blur-sm dark:border-gray-700/80 dark:bg-gray-900/95">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200/80 bg-white/95 px-6 shadow-sm backdrop-blur-sm dark:border-slate-800/90 dark:bg-slate-950/95 dark:text-slate-100">
       {!isHome ? (
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors
-                     text-gray-500 hover:text-green-700 hover:bg-green-50
-                     dark:text-gray-400 dark:hover:text-green-400 dark:hover:bg-green-900/30"
+          className="group flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-green-50 hover:text-green-700 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
         >
-          <Home size={18} />
+          <Home
+            className="h-5 w-5 shrink-0 text-slate-500 transition-colors group-hover:text-green-700 dark:text-slate-500 dark:group-hover:text-slate-200"
+            strokeWidth={2}
+            aria-hidden
+          />
           <span className="hidden sm:inline">Panel principal</span>
         </Link>
       ) : (
@@ -27,20 +29,19 @@ export default function Header() {
       )}
 
       <button
+        type="button"
         onClick={toggleTheme}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors
-                   text-gray-500 hover:text-gray-900 hover:bg-gray-100
-                   dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
+        className="flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-white/[0.06] dark:hover:text-white"
         aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       >
         {theme === 'dark' ? (
           <>
-            <Sun size={18} />
+            <Sun className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
             <span className="hidden sm:inline">Modo claro</span>
           </>
         ) : (
           <>
-            <Moon size={18} />
+            <Moon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
             <span className="hidden sm:inline">Modo oscuro</span>
           </>
         )}

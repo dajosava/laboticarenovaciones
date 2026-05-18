@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import {
   calcularDiasRestantes,
-  clasesColorBadgeKpiPanelRenovaciones,
   cn,
   formatearFechaCorta,
   formatMontoFacturaCrc,
@@ -12,7 +11,19 @@ import type { Renovacion, Tratamiento } from '@/types'
 import Link from 'next/link'
 import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Activity, AlertTriangle, Calendar, ChevronDown, CheckCircle2, Clock } from 'lucide-react'
+import { Activity, AlertTriangle, Calendar, CheckCircle2, Clock, Package, Stethoscope } from 'lucide-react'
+import {
+  BadgePrioridadTratamiento,
+  BarraProgresoTratamiento,
+  CeldaMetrica,
+  clasesArticuloInternoFicha,
+  clasesSeccionFicha,
+  clasesSubtituloSeccionFicha,
+  clasesTituloSeccionFicha,
+  EncabezadoSeccionColapsable,
+  FilaMetrica,
+  PieSeccionFicha,
+} from '@/components/pacientes/ficha-seccion'
 import BotonContactadoRenovacion from '@/app/(app)/dashboard/BotonContactadoRenovacion'
 import BotonEliminarPaciente from './BotonEliminarPaciente'
 import NotasPacienteEditable from './NotasPacienteEditable'
@@ -151,8 +162,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
   return (
     <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-6 lg:px-8">
       {/* HEADER — control center */}
-      <header className="mb-6 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <header className="mb-6 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-5">
           <TarjetaDatosPacienteEditable
             pacienteId={id}
             inicial={{
@@ -162,6 +172,8 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
               email: paciente.email,
               empresa: paciente.empresa,
               seguro_medico: paciente.seguro_medico,
+              numero_poliza: paciente.numero_poliza ?? null,
+              numero_certificado: paciente.numero_certificado ?? null,
               tipo_pago: paciente.tipo_pago,
               farmacia_id: paciente.farmacia_id,
               farmacia_nombre: paciente.farmacia?.nombre ?? null,
@@ -172,6 +184,12 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
               direccion: paciente.direccion,
               arreglo_entrega: paciente.arreglo_entrega,
               usar_direccion_cr: tieneDireccionCr(paciente),
+              clasificacion_alta: paciente.clasificacion_alta ?? null,
+              fecha_nacimiento: paciente.fecha_nacimiento ?? null,
+              encargado_nombre: paciente.encargado_nombre ?? null,
+              encargado_documento: paciente.encargado_documento ?? null,
+              encargado_telefono: paciente.encargado_telefono ?? null,
+              encargado_parentesco: paciente.encargado_parentesco ?? null,
             }}
             farmacias={farmaciasActivas ?? []}
             estadoGlobal={{
@@ -180,124 +198,111 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
               desc: global.desc,
             }}
             ultimoContactoLabel={ultimoContactoLabel}
-          />
-
-          <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:w-auto lg:flex-col">
-            {peorTratamiento ? (
-              <div className="flex w-full justify-center sm:w-auto sm:justify-start">
+            accionesVista={{
+              contactado: peorTratamiento ? (
                 <BotonContactadoRenovacion
                   tratamientoId={peorTratamiento.id}
                   contactado={!!peorTratamiento.contactado_renovacion_en}
+                  variant="ficha"
                 />
-              </div>
-            ) : null}
-            <Link
-              href={`/pacientes/${id}/tratamiento/nuevo`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
-              + Tratamiento
-            </Link>
-            <div className="flex justify-end sm:ml-auto lg:ml-0">
-              <BotonEliminarPaciente pacienteId={id} nombre={paciente.nombre} />
-            </div>
-          </div>
-        </div>
+              ) : undefined,
+              secundarias: (
+                <>
+                  <Link
+                    href={`/pacientes/${id}/tratamiento/nuevo`}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    + Tratamiento
+                  </Link>
+                  <BotonEliminarPaciente pacienteId={id} nombre={paciente.nombre} variant="ficha" />
+                </>
+              ),
+            }}
+          />
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* IZQUIERDA: tratamientos + historial */}
         <div className="space-y-6 lg:col-span-7 xl:col-span-8">
-          <section id="tratamientos-activos" className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-            <details className="group">
-              <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-200 ease-out hover:border-slate-200 hover:bg-slate-100/90 hover:shadow-md active:scale-[0.995] dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:shadow-lg dark:hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900">
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-hover:text-slate-800 dark:text-slate-400 dark:group-hover:text-slate-100">
-                    Tratamientos activos
-                  </h2>
-                </span>
-                <ChevronDown
-                  className="h-5 w-5 shrink-0 text-slate-400 transition-all duration-200 ease-out group-hover:text-brand-600 group-open:rotate-180 dark:text-slate-500 dark:group-hover:text-brand-400"
-                  aria-hidden
-                />
-              </summary>
+          <section id="tratamientos-activos" className={clasesSeccionFicha}>
+            <details className="group" open>
+              <EncabezadoSeccionColapsable icon={Calendar} titulo="Tratamientos activos" />
               <div className="mt-4">
                 {tratamientosActivos.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">No hay tratamientos activos registrados.</p>
+                  <PieSeccionFicha className="mt-0 border-amber-100 bg-amber-50/80 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                    No hay tratamientos activos registrados.
+                  </PieSeccionFicha>
                 ) : (
                   <div className="space-y-4">
                     {tratamientosActivos.map((t: Tratamiento) => {
                       const dias = calcularDiasRestantes(t.fecha_vencimiento)
                       const riesgo = riesgoTratamiento(dias)
-                      const porcentaje = Math.max(0, Math.min(100, (dias / 30) * 100))
                       return (
-                        <article
-                          key={t.id}
-                          className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 md:p-5"
-                        >
+                        <article key={t.id} className={clasesArticuloInternoFicha}>
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{formatoMedicamento(t)}</h3>
-                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                              <h3 className="text-base font-semibold text-slate-900 dark:text-white">{formatoMedicamento(t)}</h3>
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                 {t.dosis_diaria} / día · {t.tipo === 'cronico' ? 'Crónico' : 'Temporal'}
                               </p>
                             </div>
-                            <span
-                              className={cn(
-                                'self-start rounded-full border px-2.5 py-1 text-xs font-semibold',
-                                clasesColorBadgeKpiPanelRenovaciones(dias),
-                              )}
-                            >
-                              {dias < 0 ? 'Vencido' : dias <= 1 ? 'Crítico' : dias <= 5 ? 'Urgente' : dias <= 15 ? 'Planificación' : 'Al día'}
-                            </span>
+                            <BadgePrioridadTratamiento dias={dias} />
                           </div>
 
-                          <div className="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-400 sm:grid-cols-2">
-                            <p>
-                              <span className="font-medium text-slate-500 dark:text-slate-400">Último despacho:</span>{' '}
+                          <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                            <CeldaMetrica icon={Package} label="Último despacho">
                               {formatearFechaCorta(t.fecha_surtido)}
-                            </p>
-                            <p>
-                              <span className="font-medium text-slate-500 dark:text-slate-400">Inicio de toma:</span>{' '}
+                            </CeldaMetrica>
+                            <CeldaMetrica icon={Calendar} label="Inicio de toma">
                               {formatearFechaCorta(t.fecha_inicio_tratamiento ?? t.fecha_surtido)}
-                            </p>
-                            <p>
-                              <span className="font-medium text-slate-500 dark:text-slate-400">Vence:</span>{' '}
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">{textoVencimiento(dias)}</span>
-                              <span className="text-slate-400"> ({formatearFechaCorta(t.fecha_vencimiento)})</span>
-                            </p>
+                            </CeldaMetrica>
+                            <CeldaMetrica icon={Clock} label="Vence" className="sm:col-span-2 md:col-span-1">
+                              <span className="font-semibold">{textoVencimiento(dias)}</span>
+                              <span className="font-normal text-slate-500 dark:text-slate-400">
+                                {' '}
+                                ({formatearFechaCorta(t.fecha_vencimiento)})
+                              </span>
+                            </CeldaMetrica>
+                            {t.medico_receta_id?.trim() ? (
+                              <CeldaMetrica icon={Stethoscope} label="ID del médico" mono className="sm:col-span-2 md:col-span-3">
+                                {t.medico_receta_id.trim()}
+                              </CeldaMetrica>
+                            ) : null}
                           </div>
 
-                          <p className="mt-2 text-sm">
+                          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
                             <span className="font-medium text-slate-500 dark:text-slate-400">Necesidad de renovación:</span>{' '}
                             <span className={`font-bold ${riesgo.className}`}>{riesgo.label}</span>
-                            {dias < 0 ? <span className="text-slate-500"> — sin renovación registrada tras vencimiento</span> : null}
+                            {dias < 0 ? (
+                              <span className="text-slate-500 dark:text-slate-400"> — sin renovación registrada tras vencimiento</span>
+                            ) : null}
                           </p>
 
-                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                            <div
-                              className={`h-full rounded-full ${
-                                dias <= 1 ? 'bg-red-500' : dias <= 5 ? 'bg-amber-500' : dias <= 15 ? 'bg-yellow-400' : 'bg-emerald-500'
-                              }`}
-                              style={{ width: `${porcentaje}%` }}
-                            />
-                          </div>
+                          <BarraProgresoTratamiento dias={dias} />
 
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <Link
-                              href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
-                              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
-                            >
-                              <CheckCircle2 className="h-4 w-4" aria-hidden />
-                              Registrar renovación
-                            </Link>
-                            <a
-                              href="#historial-renovaciones"
-                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                            >
-                              Ver historial
-                            </a>
-                            <BotonContactadoRenovacion tratamientoId={t.id} contactado={!!t.contactado_renovacion_en} />
+                          <div className="mt-4 space-y-2">
+                            <div className="flex flex-wrap gap-2">
+                              <Link
+                                href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                              >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                                Registrar renovación
+                              </Link>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <a
+                                href="#historial-renovaciones"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                              >
+                                Ver historial
+                              </a>
+                              <BotonContactadoRenovacion
+                                tratamientoId={t.id}
+                                contactado={!!t.contactado_renovacion_en}
+                                variant="ficha"
+                              />
+                            </div>
                           </div>
                         </article>
                       )
@@ -308,23 +313,14 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
             </details>
           </section>
 
-          <section id="historial-renovaciones" className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
+          <section id="historial-renovaciones" className={clasesSeccionFicha}>
             <details className="group">
-              <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-all duration-200 ease-out hover:border-slate-200 hover:bg-slate-100/90 hover:shadow-md active:scale-[0.995] dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:shadow-lg dark:hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900">
-                <span className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 transition-colors duration-200 group-hover:text-slate-800 dark:text-slate-400 dark:group-hover:text-slate-100">
-                    Historial de renovaciones
-                  </h2>
-                </span>
-                <ChevronDown
-                  className="h-5 w-5 shrink-0 text-slate-400 transition-all duration-200 ease-out group-hover:text-brand-600 group-open:rotate-180 dark:text-slate-500 dark:group-hover:text-brand-400"
-                  aria-hidden
-                />
-              </summary>
+              <EncabezadoSeccionColapsable icon={Clock} titulo="Historial de renovaciones" />
               <div className="mt-4">
                 {renovaciones.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Sin renovaciones registradas aún.</p>
+                  <PieSeccionFicha className="mt-0 border-amber-100 bg-amber-50/80 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                    Sin renovaciones registradas aún.
+                  </PieSeccionFicha>
                 ) : (
                   <ol className="relative ms-2 border-l border-slate-200 ps-6 dark:border-slate-700">
                     {renovaciones.map((r: Renovacion) => {
@@ -386,43 +382,40 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
 
         {/* DERECHA: datos, notas, métricas */}
         <div className="space-y-6 lg:col-span-5 xl:col-span-4">
-          <section id="bloque-notas" className="scroll-mt-24 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Notas clínicas</h2>
-            <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Preferencias de contacto, alertas o contexto para el equipo.</p>
+          <section id="bloque-notas" className={cn('scroll-mt-24', clasesSeccionFicha)}>
+            <h2 className={clasesTituloSeccionFicha}>Notas clínicas</h2>
+            <p className={cn('mt-2', clasesSubtituloSeccionFicha)}>
+              Preferencias de contacto, alertas o contexto para el equipo.
+            </p>
             <NotasPacienteEditable pacienteId={id} notasIniciales={paciente.notas} />
           </section>
 
-          <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-md dark:border-slate-800 dark:bg-slate-900 md:p-6">
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <Activity className="h-4 w-4" aria-hidden />
+          <section className={clasesSeccionFicha}>
+            <h2 className={cn('flex items-center gap-2', clasesTituloSeccionFicha)}>
+              <Activity className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden />
               Comportamiento (datos registrados)
             </h2>
-            <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
-              <li className="flex justify-between gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Renovaciones en historial</span>
-                <span className="font-semibold">{totalRenov}</span>
-              </li>
+            <ul className="mt-4 space-y-1">
+              <FilaMetrica label="Renovaciones en historial" value={totalRenov} destacarWarning={totalRenov === 0} />
               {puntualidadPct !== null ? (
-                <li className="flex justify-between gap-2">
-                  <span className="text-slate-500 dark:text-slate-400">A tiempo (vs vencimiento actual del tratamiento)</span>
-                  <span className="font-semibold">{puntualidadPct}%</span>
-                </li>
+                <FilaMetrica
+                  label="A tiempo (vs vencimiento actual del tratamiento)"
+                  value={`${puntualidadPct}%`}
+                />
               ) : null}
-              <li className="flex justify-between gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Posibles retrasos detectados</span>
-                <span className="font-semibold">{renovacionesTardias}</span>
-              </li>
+              <FilaMetrica
+                label="Posibles retrasos detectados"
+                value={renovacionesTardias}
+                destacarWarning={renovacionesTardias > 0}
+              />
               {promedioEntreRenovaciones ? (
-                <li className="flex justify-between gap-2">
-                  <span className="text-slate-500 dark:text-slate-400">Tiempo medio entre renovaciones</span>
-                  <span className="font-semibold">{promedioEntreRenovaciones} días</span>
-                </li>
+                <FilaMetrica label="Tiempo medio entre renovaciones" value={`${promedioEntreRenovaciones} días`} />
               ) : null}
             </ul>
-            <p className="mt-3 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
-              La puntualidad se aproxima comparando cada renovación con la fecha de vencimiento actual del tratamiento vinculado; si hubo
-              ajustes de ciclo, revisa el detalle en el timeline.
-            </p>
+            <PieSeccionFicha>
+              La puntualidad se aproxima comparando cada renovación con la fecha de vencimiento actual del tratamiento vinculado; si
+              hubo ajustes de ciclo, revisa el detalle en el timeline.
+            </PieSeccionFicha>
           </section>
         </div>
       </div>

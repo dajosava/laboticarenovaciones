@@ -1,0 +1,22 @@
+---
+description: Al escribir, modificar o pedir tests (unit, componente, integración, e2e), usar el skill testing-react-next.
+globs: "**/*.{test,spec}.{ts,tsx},e2e/**/*.{ts,tsx},**/vitest.config.*,**/vitest.setup.ts,**/playwright.config.*"
+alwaysApply: false
+---
+
+# Tests — skill `testing-react-next`
+
+Cuando el usuario pida tests o trabajes en archivos `*.test.*`, `*.spec.*` o `e2e/`:
+
+1. **Leer primero** `.cursor/skills/testing-react-next/SKILL.md` y aplicar sus pasos (contexto → stack → tipo de test → patrones → output).
+2. **Referencias**: leer solo los `.md` en `references/` que correspondan al caso (no cargar todo).
+3. **FarmaRenovar**: leer siempre `references/farmarenovar-domain.md` (factories, bandas del dashboard, mocks por rol).
+4. Si no hay Vitest/Jest en `package.json`, proponer setup según `references/setup.md`. En FarmaRenovar ya existe: `npm run test:run`.
+5. **Entregar siempre**: archivo de test completo, comando para ejecutarlo, notas de setup si faltan deps, y qué casos quedan sin cubrir.
+
+## Convenciones
+
+- Colocar tests junto al fuente (`Componente.test.tsx`) o en `e2e/` para Playwright.
+- `userEvent` antes que `fireEvent`; queries RTL por rol/label.
+- No testear detalles de implementación; no snapshots como único assert.
+- Reutilizar `src/lib/mock/data.ts` y tipos de `src/types/index.ts` cuando aplique.

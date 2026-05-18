@@ -189,3 +189,10 @@ Desde `/admin/farmacias` o con un INSERT en la tabla `farmacias` en Supabase.
 
 **Arquitectura y comandos**  
 Diagrama y lista de comandos en `comandos.log`. Changelog en `CHANGELOG.md`.
+
+
+### refactoring
+```
+"Refactor this file following the project rules. Consolidate state, extract constants, add Field wrapper, move validation to validar(), and clean up JSX. Do not change any behavior or Supabase column names."
+
+```

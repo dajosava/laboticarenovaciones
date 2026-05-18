@@ -30,6 +30,7 @@ export default function NuevoTratamientoPage() {
     notas: '',
     numero_factura: '',
     monto_total_factura: '',
+    medico_receta_id: '',
   })
 
   const fechaVencimientoPreview =
@@ -94,6 +95,7 @@ export default function NuevoTratamientoPage() {
           fecha_vencimiento: fechaVencimientoPreview,
           tipo: tratamiento.tipo,
           notas: tratamiento.notas.trim() || null,
+          medico_receta_id: tratamiento.medico_receta_id.trim() || null,
           registrado_por: user.id,
         })
         .select('id')
@@ -167,6 +169,7 @@ export default function NuevoTratamientoPage() {
                       medicamento: '',
                       marca: '',
                       concentracion: '',
+                      medico_receta_id: '',
                     }))
                     return
                   }
@@ -198,6 +201,17 @@ export default function NuevoTratamientoPage() {
                 onChange={e => setTratamiento(t => ({ ...t, concentracion: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Ej: 500mg, 20mg"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">ID del medico</label>
+              <input
+                type="text"
+                value={tratamiento.medico_receta_id}
+                onChange={(e) => setTratamiento((t) => ({ ...t, medico_receta_id: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Identificador del médico que emitió la receta (opcional)"
+                autoComplete="off"
               />
             </div>
             <div>

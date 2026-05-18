@@ -5,6 +5,7 @@
 export type Rol = 'super_admin' | 'admin_sucursal' | 'empleado'
 export type TipoTratamiento = 'cronico' | 'temporal'
 export type TipoPago = 'directo' | 'reembolso'
+export type ClasificacionAltaPaciente = 'padron_nacional' | 'no_listado_cr' | 'menor' | 'extranjero'
 
 // ─── FARMACIA ────────────────────────────────
 export interface Farmacia {
@@ -46,12 +47,21 @@ export interface Paciente {
   arreglo_entrega?: string | null
   empresa: string | null
   seguro_medico: string | null
+  numero_poliza?: string | null
+  numero_certificado?: string | null
   tipo_pago: TipoPago | null
   farmacia_id: string
   registrado_por: string
   notas: string | null
   activo: boolean
   creado_en: string
+  clasificacion_alta?: ClasificacionAltaPaciente | null
+  cedula_identidad?: string | null
+  fecha_nacimiento?: string | null
+  encargado_nombre?: string | null
+  encargado_documento?: string | null
+  encargado_telefono?: string | null
+  encargado_parentesco?: string | null
   farmacia?: Farmacia
   empleado?: Empleado
   tratamientos?: Tratamiento[]
@@ -65,6 +75,8 @@ export interface Tratamiento {
   medicamento: string
   marca?: string | null
   concentracion?: string | null
+  /** ID o código del médico que emitió la receta (control interno). */
+  medico_receta_id?: string | null
   dosis_diaria: number
   unidades_caja: number
   /** Despacho en farmacia / facturación (columna `fecha_surtido`). */

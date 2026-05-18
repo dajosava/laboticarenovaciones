@@ -2,7 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
+import {
+  calcularFechaVencimiento,
+  edadDesdeFechaNacimiento,
+  normalizarNombrePersona,
+  parseMontoFacturaInput,
+} from '@/lib/utils'
 import { distritosPorProvinciaCanton } from '@/lib/costa-rica/direccion-cr'
 import {
   MIN_CARACTERES_ARREGLO_ENTREGA,
@@ -54,12 +59,22 @@ export async function actualizarNotasPaciente(pacienteId: string, notas: string)
   return {}
 }
 
+export type DatosMenorActualizar = {
+  fecha_nacimiento: string
+  encargado_nombre: string
+  encargado_documento: string
+  encargado_telefono: string
+  encargado_parentesco: string
+}
+
 export type PayloadActualizarDatosPaciente = {
   nombre: string
   telefono: string
   email: string | null
   empresa: string | null
   seguro_medico: string | null
+  numero_poliza: string | null
+  numero_certificado: string | null
   tipo_pago: 'directo' | 'reembolso' | null
   farmacia_id: string
   /** Dirección por provincia/cantón/distrito o texto libre legado. */
@@ -70,6 +85,8 @@ export type PayloadActualizarDatosPaciente = {
   direccion_senas: string | null
   direccion_libre: string | null
   arreglo_entrega: string | null
+  /** Solo para pacientes con clasificacion_alta = menor. */
+  datos_menor?: DatosMenorActualizar | null
 }
 
 export async function actualizarDatosPaciente(
@@ -81,7 +98,19 @@ export async function actualizarDatosPaciente(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
-  const nombre = data.nombre.trim()
+  const { data: pacienteClasif, error: errClasif } = await supabase
+    .from('pacientes')
+    .select('clasificacion_alta')
+    .eq('id', pacienteId)
+    .single()
+  if (errClasif) return { error: errClasif.message }
+
+  const clasificacion = pacienteClasif?.clasificacion_alta
+  const nombreManualMayusculas =
+    clasificacion === 'menor' || clasificacion === 'extranjero' || clasificacion === 'no_listado_cr'
+
+  const nombreRaw = data.nombre.trim()
+  const nombre = nombreManualMayusculas ? normalizarNombrePersona(nombreRaw) : nombreRaw
   const telefono = data.telefono.trim()
   if (!nombre) return { error: 'El nombre es obligatorio.' }
   if (!telefono) return { error: 'El teléfono es obligatorio.' }
@@ -145,23 +174,57 @@ export async function actualizarDatosPaciente(
   const tipoPago =
     data.tipo_pago === 'directo' || data.tipo_pago === 'reembolso' ? data.tipo_pago : null
 
+  const updateRow: Record<string, unknown> = {
+    nombre,
+    telefono,
+    email: data.email?.trim() || null,
+    empresa: data.empresa?.trim() || null,
+    seguro_medico: data.seguro_medico?.trim() || null,
+    numero_poliza: data.numero_poliza?.trim() || null,
+    numero_certificado: data.numero_certificado?.trim() || null,
+    tipo_pago: tipoPago,
+    farmacia_id: farmaciaId,
+    provincia_cr: provinciaCr,
+    canton_cr: cantonCr,
+    distrito_cr: distritoCr,
+    direccion_senas: direccionSenas,
+    direccion: direccionFinal,
+    arreglo_entrega: riesgo.length > 0 ? arregloTrim : null,
+  }
+
+  if (data.datos_menor) {
+    if (clasificacion !== 'menor') {
+      return { error: 'Los datos de encargado solo aplican a pacientes menores de edad.' }
+    }
+
+    const fechaNac = data.datos_menor.fecha_nacimiento.trim()
+    const encNombre = normalizarNombrePersona(data.datos_menor.encargado_nombre)
+    const encDoc = data.datos_menor.encargado_documento.trim()
+    const encTel = data.datos_menor.encargado_telefono.trim()
+    const encParentesco = data.datos_menor.encargado_parentesco.trim()
+
+    if (!fechaNac) return { error: 'Indica la fecha de nacimiento del menor.' }
+    const edad = edadDesdeFechaNacimiento(fechaNac)
+    if (edad === null) return { error: 'La fecha de nacimiento no es válida.' }
+    if (edad >= 18) {
+      return {
+        error: 'La fecha no corresponde a un menor de edad. Verifique la fecha de nacimiento.',
+      }
+    }
+    if (!encNombre || !encDoc || !encTel || !encParentesco) {
+      return { error: 'Complete todos los datos de la persona encargada.' }
+    }
+
+    updateRow.fecha_nacimiento = fechaNac
+    updateRow.encargado_nombre = encNombre
+    updateRow.encargado_documento = encDoc
+    updateRow.encargado_telefono = encTel
+    updateRow.encargado_parentesco = encParentesco
+  }
+
   const { error } = await supabase
     .from('pacientes')
-    .update({
-      nombre,
-      telefono,
-      email: data.email?.trim() || null,
-      empresa: data.empresa?.trim() || null,
-      seguro_medico: data.seguro_medico?.trim() || null,
-      tipo_pago: tipoPago,
-      farmacia_id: farmaciaId,
-      provincia_cr: provinciaCr,
-      canton_cr: cantonCr,
-      distrito_cr: distritoCr,
-      direccion_senas: direccionSenas,
-      direccion: direccionFinal,
-      arreglo_entrega: riesgo.length > 0 ? arregloTrim : null,
-    })
+    .update(updateRow)
     .eq('id', pacienteId)
 
   if (error) return { error: error.message }

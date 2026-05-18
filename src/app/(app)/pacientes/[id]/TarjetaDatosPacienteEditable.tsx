@@ -1,22 +1,32 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
+  AlertTriangle,
+  BadgeCheck,
   Briefcase,
   Building2,
+  Calendar,
+  CheckCircle2,
   Clock,
+  CreditCard,
+  FileText,
   HeartPulse,
   Mail,
   MapPin,
   Package,
-  PencilLine,
   Phone,
+  Settings,
   Shield,
+  StickyNote,
   User,
+  Users,
   Wallet,
 } from 'lucide-react'
+import { cn, edadDesdeFechaNacimiento, formatearFechaCorta, normalizarNombrePersona } from '@/lib/utils'
+import type { ClasificacionAltaPaciente } from '@/types'
 import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
 import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
 import {
@@ -24,12 +34,109 @@ import {
   cantonesPorProvincia,
   distritosPorProvinciaCanton,
 } from '@/lib/costa-rica/direccion-cr'
-import { tieneDireccionCr, textoDireccionParaFicha } from '@/lib/costa-rica/paciente-direccion'
+import { tieneDireccionCr } from '@/lib/costa-rica/paciente-direccion'
 import {
   MIN_CARACTERES_ARREGLO_ENTREGA,
   coincidenciasRiesgoEntrega,
 } from '@/lib/entrega/lugares-riesgo-entrega'
+import {
+  ZONA_RIESGO_CONTENEDOR,
+  ZONA_RIESGO_DESCRIPCION,
+  ZONA_RIESGO_ETIQUETA_CAMPO,
+  ZONA_RIESGO_META,
+  ZONA_RIESGO_TEXTAREA,
+  ZONA_RIESGO_TITULO,
+} from '@/lib/entrega/zona-riesgo-ui'
 import { actualizarDatosPaciente, type PayloadActualizarDatosPaciente } from './actions'
+
+export type AccionesVistaFicha = {
+  contactado?: React.ReactNode
+  secundarias?: React.ReactNode
+}
+
+function inicialesPersona(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean)
+  if (partes.length >= 2) return (partes[0].charAt(0) + partes[1].charAt(0)).toUpperCase()
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return '?'
+}
+
+function AvatarPersona({ nombre, className }: { nombre: string; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-base font-bold tracking-tight text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200',
+        className,
+      )}
+      aria-hidden
+    >
+      {inicialesPersona(nombre)}
+    </div>
+  )
+}
+
+function CeldaInfoGrid({
+  icon: Icon,
+  label,
+  children,
+  className,
+  mono,
+  destacarWarning,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  children: React.ReactNode
+  className?: string
+  mono?: boolean
+  destacarWarning?: boolean
+}) {
+  return (
+    <div className={cn('min-w-0', className)}>
+      <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <Icon className="h-3 w-3 shrink-0" aria-hidden />
+        {label}
+      </p>
+      <p
+        className={cn(
+          'text-sm font-medium leading-snug text-slate-900 dark:text-slate-100',
+          mono && 'font-mono text-[13px]',
+          destacarWarning && 'text-amber-600 dark:text-amber-400',
+        )}
+      >
+        {children}
+      </p>
+    </div>
+  )
+}
+
+function FilaDato({
+  icon: Icon,
+  label,
+  children,
+  className,
+  mono,
+}: {
+  icon?: React.ComponentType<{ className?: string }>
+  label: string
+  children: React.ReactNode
+  className?: string
+  mono?: boolean
+}) {
+  return (
+    <div className={cn('flex min-w-0 items-start gap-1.5 text-xs leading-snug sm:text-sm', className)}>
+      {Icon ? <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden /> : null}
+      <span className="shrink-0 font-medium text-slate-500 dark:text-slate-400">{label}</span>
+      <span
+        className={cn(
+          'min-w-0 break-words text-slate-800 dark:text-slate-200',
+          mono && 'font-mono text-[11px] sm:text-xs',
+        )}
+      >
+        {children}
+      </span>
+    </div>
+  )
+}
 
 const SEGUROS_MEDICOS = [
   'INS',
@@ -50,6 +157,8 @@ export type TarjetaDatosPacienteInicial = {
   email: string | null
   empresa: string | null
   seguro_medico: string | null
+  numero_poliza: string | null
+  numero_certificado: string | null
   tipo_pago: 'directo' | 'reembolso' | null
   farmacia_id: string
   farmacia_nombre: string | null
@@ -60,12 +169,204 @@ export type TarjetaDatosPacienteInicial = {
   direccion: string | null
   arreglo_entrega: string | null
   usar_direccion_cr: boolean
+  clasificacion_alta?: ClasificacionAltaPaciente | null
+  fecha_nacimiento?: string | null
+  encargado_nombre?: string | null
+  encargado_documento?: string | null
+  encargado_telefono?: string | null
+  encargado_parentesco?: string | null
+}
+
+function BloqueEncargadoMenor({
+  fechaNacimiento,
+  encargadoNombre,
+  encargadoDocumento,
+  encargadoTelefono,
+  encargadoParentesco,
+}: {
+  fechaNacimiento: string | null
+  encargadoNombre: string | null
+  encargadoDocumento: string | null
+  encargadoTelefono: string | null
+  encargadoParentesco: string | null
+}) {
+  const nacimientoLabel = fechaNacimiento?.trim()
+    ? formatearFechaCorta(fechaNacimiento.trim())
+    : '—'
+
+  const nombreEnc = encargadoNombre?.trim() || '—'
+  const parentesco = encargadoParentesco?.trim()
+
+  return (
+    <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/90 px-4 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/35">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+        Persona encargada
+      </p>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <AvatarPersona nombre={nombreEnc} className="h-10 w-10 text-sm" />
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{nombreEnc}</p>
+            {parentesco ? (
+              <span className="mt-0.5 inline-flex rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200">
+                {parentesco}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          {nacimientoLabel}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+          <CreditCard className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          <span className="font-mono text-[13px]">{encargadoDocumento?.trim() || '—'}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+          <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          {encargadoTelefono?.trim() || '—'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function FormularioEncargadoMenor({
+  f,
+  setF,
+  inputClass,
+}: {
+  f: Pick<
+    FormState,
+    | 'fechaNacimiento'
+    | 'encargadoNombre'
+    | 'encargadoDocumento'
+    | 'encargadoTelefono'
+    | 'encargadoParentesco'
+  >
+  setF: React.Dispatch<React.SetStateAction<FormState>>
+  inputClass: string
+}) {
+  return (
+    <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/75 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+      <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+        <Users className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        Menor de edad y persona encargada
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Nacimiento del menor <span className="text-red-600 dark:text-red-400">*</span>
+          </label>
+          <input
+            className={inputClass}
+            type="date"
+            value={f.fechaNacimiento}
+            onChange={(e) => setF((s) => ({ ...s, fechaNacimiento: e.target.value }))}
+          />
+        </div>
+        <div className="sm:col-span-2 lg:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Nombre completo del encargado <span className="text-red-600 dark:text-red-400">*</span>
+          </label>
+          <input
+            className={inputClass}
+            value={f.encargadoNombre}
+            onChange={(e) => setF((s) => ({ ...s, encargadoNombre: e.target.value }))}
+            placeholder="Nombre y apellidos"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Documento de identidad <span className="text-red-600 dark:text-red-400">*</span>
+          </label>
+          <input
+            className={inputClass}
+            value={f.encargadoDocumento}
+            onChange={(e) => setF((s) => ({ ...s, encargadoDocumento: e.target.value }))}
+            placeholder="Cédula u otro ID"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Teléfono / WhatsApp encargado <span className="text-red-600 dark:text-red-400">*</span>
+          </label>
+          <input
+            className={inputClass}
+            type="tel"
+            value={f.encargadoTelefono}
+            onChange={(e) => setF((s) => ({ ...s, encargadoTelefono: e.target.value }))}
+            placeholder="88881234"
+            autoComplete="off"
+          />
+        </div>
+        <div className="sm:col-span-2 lg:col-span-3">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Parentesco o relación con el menor <span className="text-red-600 dark:text-red-400">*</span>
+          </label>
+          <input
+            className={inputClass}
+            value={f.encargadoParentesco}
+            onChange={(e) => setF((s) => ({ ...s, encargadoParentesco: e.target.value }))}
+            placeholder="Ej: madre, padre, tutor legal"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 type EstadoGlobalTarjeta = {
   estado: 'critico' | 'seguimiento' | 'estable' | 'sin_activos'
   label: string
   desc: string
+}
+
+function EtiquetaMenorDeEdad() {
+  return (
+    <span
+      role="status"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200"
+    >
+      <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+      Menor de edad
+    </span>
+  )
+}
+
+function BadgeEstadoPaciente({ estado, label }: { estado: EstadoGlobalTarjeta['estado']; label: string }) {
+  const estilos =
+    estado === 'critico'
+      ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200'
+      : estado === 'seguimiento'
+        ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200'
+        : estado === 'estable'
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200'
+          : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
+
+  const Icon =
+    estado === 'critico'
+      ? AlertTriangle
+      : estado === 'seguimiento'
+        ? Clock
+        : estado === 'estable'
+          ? CheckCircle2
+          : HeartPulse
+
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+        estilos,
+      )}
+    >
+      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      {label}
+    </span>
+  )
 }
 
 type FarmaciaOpcion = { id: string; nombre: string }
@@ -76,6 +377,8 @@ type FormState = {
   email: string
   empresa: string
   seguro_medico: string
+  numero_poliza: string
+  numero_certificado: string
   tipo_pago: '' | 'directo' | 'reembolso'
   farmacia_id: string
   modoDireccion: 'cr' | 'libre'
@@ -85,15 +388,27 @@ type FormState = {
   direccionSenas: string
   direccionLibre: string
   arregloEntrega: string
+  fechaNacimiento: string
+  encargadoNombre: string
+  encargadoDocumento: string
+  encargadoTelefono: string
+  encargadoParentesco: string
+}
+
+function nombreManualEnMayusculas(clasificacion?: ClasificacionAltaPaciente | null): boolean {
+  return clasificacion === 'menor' || clasificacion === 'extranjero' || clasificacion === 'no_listado_cr'
 }
 
 function fieldsFromInicial(p: TarjetaDatosPacienteInicial): FormState {
+  const nombre = p.nombre
   return {
-    nombre: p.nombre,
+    nombre: nombreManualEnMayusculas(p.clasificacion_alta) ? normalizarNombrePersona(nombre) : nombre,
     telefono: p.telefono ?? '',
     email: p.email ?? '',
     empresa: p.empresa ?? '',
     seguro_medico: p.seguro_medico ?? '',
+    numero_poliza: p.numero_poliza ?? '',
+    numero_certificado: p.numero_certificado ?? '',
     tipo_pago: (p.tipo_pago ?? '') as '' | 'directo' | 'reembolso',
     farmacia_id: p.farmacia_id,
     modoDireccion: p.usar_direccion_cr ? 'cr' : 'libre',
@@ -103,6 +418,11 @@ function fieldsFromInicial(p: TarjetaDatosPacienteInicial): FormState {
     direccionSenas: p.direccion_senas ?? '',
     direccionLibre: p.direccion?.trim() || '',
     arregloEntrega: p.arreglo_entrega?.trim() || '',
+    fechaNacimiento: p.fecha_nacimiento?.trim().slice(0, 10) ?? '',
+    encargadoNombre: p.encargado_nombre ? normalizarNombrePersona(p.encargado_nombre) : '',
+    encargadoDocumento: p.encargado_documento ?? '',
+    encargadoTelefono: p.encargado_telefono ?? '',
+    encargadoParentesco: p.encargado_parentesco ?? '',
   }
 }
 
@@ -113,6 +433,8 @@ function serializarInicial(p: TarjetaDatosPacienteInicial): string {
     email: p.email,
     empresa: p.empresa,
     seguro_medico: p.seguro_medico,
+    numero_poliza: p.numero_poliza,
+    numero_certificado: p.numero_certificado,
     tipo_pago: p.tipo_pago,
     farmacia_id: p.farmacia_id,
     provincia_cr: p.provincia_cr,
@@ -122,6 +444,12 @@ function serializarInicial(p: TarjetaDatosPacienteInicial): string {
     direccion: p.direccion,
     arreglo_entrega: p.arreglo_entrega,
     usar_direccion_cr: p.usar_direccion_cr,
+    clasificacion_alta: p.clasificacion_alta,
+    fecha_nacimiento: p.fecha_nacimiento,
+    encargado_nombre: p.encargado_nombre,
+    encargado_documento: p.encargado_documento,
+    encargado_telefono: p.encargado_telefono,
+    encargado_parentesco: p.encargado_parentesco,
   })
 }
 
@@ -131,20 +459,26 @@ export default function TarjetaDatosPacienteEditable({
   farmacias,
   estadoGlobal,
   ultimoContactoLabel,
+  accionesVista,
 }: {
   pacienteId: string
   inicial: TarjetaDatosPacienteInicial
   farmacias: FarmaciaOpcion[]
   estadoGlobal: EstadoGlobalTarjeta
   ultimoContactoLabel: string
+  accionesVista?: AccionesVistaFicha
 }) {
   const router = useRouter()
   const [editando, setEditando] = useState(false)
   const [f, setF] = useState<FormState>(() => fieldsFromInicial(inicial))
+  const esMenorDeEdad = inicial.clasificacion_alta === 'menor'
+  const nombreEnMayusculas = nombreManualEnMayusculas(inicial.clasificacion_alta)
   const [guardando, setGuardando] = useState(false)
   const [modalRiesgo, setModalRiesgo] = useState(false)
 
-  const inicialKey = useMemo(() => serializarInicial(inicial), [inicial])
+  const inicialRef = useRef(inicial)
+  inicialRef.current = inicial
+  const inicialKey = serializarInicial(inicial)
 
   const opcionesSeguro = useMemo(() => {
     const extra = inicial.seguro_medico?.trim()
@@ -154,8 +488,8 @@ export default function TarjetaDatosPacienteEditable({
 
   useEffect(() => {
     if (editando) return
-    setF(fieldsFromInicial(inicial))
-  }, [inicialKey, editando, inicial])
+    setF(fieldsFromInicial(inicialRef.current))
+  }, [inicialKey, editando])
 
   const coincidenciasRiesgo = useMemo(
     () =>
@@ -191,18 +525,19 @@ export default function TarjetaDatosPacienteEditable({
   )
 
   const tieneCrVista = f.modoDireccion === 'cr' && tieneDireccionCr(camposDirFicha)
-  const textoDirFicha = textoDireccionParaFicha(camposDirFicha)
 
   const farmaciaNombreVista =
     farmacias.find((x) => x.id === f.farmacia_id)?.nombre ?? inicial.farmacia_nombre ?? '—'
 
   const construirPayload = useCallback((): PayloadActualizarDatosPaciente => {
     return {
-      nombre: f.nombre,
+      nombre: nombreEnMayusculas ? normalizarNombrePersona(f.nombre) : f.nombre.trim(),
       telefono: f.telefono,
       email: f.email.trim() || null,
       empresa: f.empresa.trim() || null,
       seguro_medico: f.seguro_medico.trim() || null,
+      numero_poliza: f.numero_poliza.trim() || null,
+      numero_certificado: f.numero_certificado.trim() || null,
       tipo_pago: f.tipo_pago === 'directo' || f.tipo_pago === 'reembolso' ? f.tipo_pago : null,
       farmacia_id: f.farmacia_id,
       modo_direccion: f.modoDireccion,
@@ -212,10 +547,47 @@ export default function TarjetaDatosPacienteEditable({
       direccion_senas: f.modoDireccion === 'cr' ? f.direccionSenas : null,
       direccion_libre: f.modoDireccion === 'libre' ? f.direccionLibre : null,
       arreglo_entrega: f.arregloEntrega.trim() || null,
+      datos_menor: esMenorDeEdad
+        ? {
+            fecha_nacimiento: f.fechaNacimiento.trim(),
+            encargado_nombre: normalizarNombrePersona(f.encargadoNombre),
+            encargado_documento: f.encargadoDocumento.trim(),
+            encargado_telefono: f.encargadoTelefono.trim(),
+            encargado_parentesco: f.encargadoParentesco.trim(),
+          }
+        : null,
     }
-  }, [f])
+  }, [f, esMenorDeEdad, nombreEnMayusculas])
+
+  function validarMenor(): boolean {
+    if (!esMenorDeEdad) return true
+    if (!f.fechaNacimiento.trim()) {
+      toast.error('Indica la fecha de nacimiento del menor.')
+      return false
+    }
+    const edad = edadDesdeFechaNacimiento(f.fechaNacimiento)
+    if (edad === null) {
+      toast.error('La fecha de nacimiento no es válida.')
+      return false
+    }
+    if (edad >= 18) {
+      toast.error('La fecha no corresponde a un menor de edad.')
+      return false
+    }
+    if (
+      !f.encargadoNombre.trim() ||
+      !f.encargadoDocumento.trim() ||
+      !f.encargadoTelefono.trim() ||
+      !f.encargadoParentesco.trim()
+    ) {
+      toast.error('Complete todos los datos de la persona encargada.')
+      return false
+    }
+    return true
+  }
 
   async function guardar() {
+    if (!validarMenor()) return
     if (requiereArregloEntrega && f.arregloEntrega.trim().length < MIN_CARACTERES_ARREGLO_ENTREGA) {
       setModalRiesgo(true)
       toast.error(
@@ -250,14 +622,18 @@ export default function TarjetaDatosPacienteEditable({
       <>
         <ModalAlertaRiesgoEntrega open={modalRiesgo} onOpenChange={setModalRiesgo} coincidencias={coincidenciasRiesgo} />
         <div className="flex min-w-0 flex-1 gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-2xl font-bold text-white shadow-md">
-            {(f.nombre.trim().charAt(0) || '?').toUpperCase()}
-          </div>
+          <AvatarPersona
+            nombre={nombreEnMayusculas ? normalizarNombrePersona(f.nombre) : f.nombre}
+            className="h-16 w-16 text-xl"
+          />
           <div className="min-w-0 flex-1 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
               <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white md:text-2xl">
                 Editar datos del paciente
               </h1>
+              {esMenorDeEdad ? <EtiquetaMenorDeEdad /> : null}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -280,10 +656,25 @@ export default function TarjetaDatosPacienteEditable({
 
             <p className="text-xs font-mono text-slate-500">ID {inicial.id.slice(0, 8)}…</p>
 
+            {esMenorDeEdad ? (
+              <FormularioEncargadoMenor f={f} setF={setF} inputClass={inputClass} />
+            ) : null}
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Nombre completo</label>
-                <input className={inputClass} value={f.nombre} onChange={(e) => setF((s) => ({ ...s, nombre: e.target.value }))} />
+                <input
+                  className={inputClass}
+                  value={f.nombre}
+                  onChange={(e) =>
+                    setF((s) => ({
+                      ...s,
+                      nombre: nombreEnMayusculas
+                        ? normalizarNombrePersona(e.target.value)
+                        : e.target.value,
+                    }))
+                  }
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Teléfono / WhatsApp</label>
@@ -308,6 +699,32 @@ export default function TarjetaDatosPacienteEditable({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                      Número de póliza
+                    </label>
+                    <input
+                      className={inputClass}
+                      value={f.numero_poliza}
+                      onChange={(e) => setF((s) => ({ ...s, numero_poliza: e.target.value }))}
+                      placeholder="Según póliza del seguro"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                      Número de certificado
+                    </label>
+                    <input
+                      className={inputClass}
+                      value={f.numero_certificado}
+                      onChange={(e) => setF((s) => ({ ...s, numero_certificado: e.target.value }))}
+                      placeholder="Según certificado"
+                      autoComplete="off"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Empresa (opcional)</label>
@@ -425,20 +842,20 @@ export default function TarjetaDatosPacienteEditable({
               )}
 
               {requiereArregloEntrega ? (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Zona de riesgo para entrega</p>
-                  <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">Coincidencias: {coincidenciasRiesgo.join(', ')}.</p>
-                  <label className="mt-3 block text-xs font-medium text-slate-800 dark:text-slate-200">
-                    Arreglo de entrega <span className="text-red-600">*</span>
+                <div className={ZONA_RIESGO_CONTENEDOR}>
+                  <p className={ZONA_RIESGO_TITULO}>Zona de riesgo para entrega</p>
+                  <p className={ZONA_RIESGO_DESCRIPCION}>Coincidencias: {coincidenciasRiesgo.join(', ')}.</p>
+                  <label className={ZONA_RIESGO_ETIQUETA_CAMPO}>
+                    Arreglo de entrega <span className="text-red-600 dark:text-red-400">*</span>
                   </label>
                   <textarea
-                    className={`${inputClass} mt-1 border-amber-300 dark:border-amber-800`}
+                    className={ZONA_RIESGO_TEXTAREA}
                     rows={3}
                     value={f.arregloEntrega}
                     onChange={(e) => setF((s) => ({ ...s, arregloEntrega: e.target.value }))}
                     placeholder="Acuerdo con el cliente (punto de entrega, horario, etc.)"
                   />
-                  <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
+                  <p className={ZONA_RIESGO_META}>
                     Mínimo {MIN_CARACTERES_ARREGLO_ENTREGA} caracteres.
                   </p>
                 </div>
@@ -450,142 +867,144 @@ export default function TarjetaDatosPacienteEditable({
     )
   }
 
-  const mostrarBloqueExtra =
-    tieneCrVista ||
-    (f.modoDireccion === 'libre' && f.direccionLibre.trim()) ||
-    f.arregloEntrega.trim()
+  const lineaDireccion = tieneCrVista
+    ? [f.provinciaCr, f.cantonCr, f.distritoCr].filter(Boolean).join(', ')
+    : f.direccionLibre.trim()
+  const senasLinea = f.modoDireccion === 'cr' ? f.direccionSenas.trim() : ''
+  const nombreVista = nombreEnMayusculas ? normalizarNombrePersona(f.nombre) : f.nombre
+  const sinRegistroContacto = ultimoContactoLabel.toLowerCase().includes('sin registro')
+  const notasPie = [senasLinea, f.arregloEntrega.trim()].filter(Boolean).join(' · ')
+
+  const btnEditar = (
+    <button
+      type="button"
+      onClick={() => setEditando(true)}
+      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+    >
+      <Settings className="h-4 w-4 shrink-0" aria-hidden />
+      Editar
+    </button>
+  )
 
   return (
-    <div className="flex min-w-0 flex-1 gap-4">
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-2xl font-bold text-white shadow-md">
-        {(f.nombre.trim().charAt(0) || '?').toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white md:text-3xl">{f.nombre}</h1>
-          <button
-            type="button"
-            onClick={() => setEditando(true)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <PencilLine className="h-4 w-4" aria-hidden />
-            Editar datos
-          </button>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-500">
-            <User className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            ID {inicial.id.slice(0, 8)}…
-          </span>
-          {f.email.trim() ? (
-            <a
-              href={`mailto:${f.email.trim()}`}
-              className="inline-flex items-center gap-1.5 hover:text-brand-600 dark:hover:text-brand-400"
-            >
-              <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {f.email.trim()}
-            </a>
-          ) : null}
-          {f.telefono.trim() ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {f.telefono.trim()}
-            </span>
-          ) : null}
-        </div>
+    <div className="min-w-0 flex-1">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 flex-1 gap-4">
+          <AvatarPersona nombre={nombreVista} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white md:text-2xl">
+                {nombreVista}
+              </h1>
+              {esMenorDeEdad ? <EtiquetaMenorDeEdad /> : null}
+              <BadgeEstadoPaciente estado={estadoGlobal.estado} label={estadoGlobal.label} />
+            </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-              estadoGlobal.estado === 'critico'
-                ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200'
-                : estadoGlobal.estado === 'seguimiento'
-                  ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
-                  : estadoGlobal.estado === 'estable'
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
-                    : 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
-            }`}
-          >
-            <HeartPulse className="h-3.5 w-3.5" aria-hidden />
-            Estado: {estadoGlobal.label}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">{estadoGlobal.desc}</span>
-        </div>
-
-        <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
-          <p className="inline-flex items-center gap-2">
-            <Building2 className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-            <span className="font-medium text-slate-500 dark:text-slate-400">Sucursal:</span>
-            {farmaciaNombreVista}
-          </p>
-          {f.seguro_medico.trim() || f.empresa.trim() || f.tipo_pago ? (
-            <div className="flex min-w-0 flex-col gap-2">
-              {f.seguro_medico.trim() ? (
-                <p className="inline-flex items-center gap-2">
-                  <Shield className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Seguro:</span>
-                  {f.seguro_medico.trim()}
-                </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                <span className="font-mono text-xs text-slate-500">{inicial.id.slice(0, 8)}…</span>
+              </span>
+              {f.email.trim() ? (
+                <a
+                  href={`mailto:${f.email.trim()}`}
+                  className="inline-flex items-center gap-1.5 hover:text-brand-600 dark:hover:text-brand-400"
+                >
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                  {f.email.trim()}
+                </a>
               ) : null}
-              {f.empresa.trim() ? (
-                <p className="inline-flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Empresa:</span>
-                  <span className="min-w-0 break-words">{f.empresa.trim()}</span>
-                </p>
-              ) : null}
-              {f.tipo_pago ? (
-                <p className="inline-flex items-center gap-2">
-                  <Wallet className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Tipo de pago:</span>
-                  {f.tipo_pago === 'directo' ? 'Pago directo' : 'Reembolso'}
-                </p>
+              {f.telefono.trim() ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                  {f.telefono.trim()}
+                </span>
               ) : null}
             </div>
-          ) : null}
-          <p className="inline-flex items-center gap-2 sm:col-span-2">
-            <Clock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-            <span className="font-medium text-slate-500 dark:text-slate-400">Último contacto (renovación):</span>
-            {ultimoContactoLabel}
-          </p>
+
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {estadoGlobal.desc}
+            </p>
+          </div>
         </div>
 
-        {mostrarBloqueExtra ? (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
-            {textoDirFicha ? (
-              <span className="inline-flex max-w-full flex-col items-start gap-1">
-                <span className="inline-flex items-start gap-1.5">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                  {tieneCrVista ? (
-                    <span className="min-w-0">
-                      <span className="block font-medium text-slate-700 dark:text-slate-300">Provincia, cantón y distrito</span>
-                      <span className="block text-slate-600 dark:text-slate-400">
-                        {f.provinciaCr}, {f.cantonCr}, {f.distritoCr}
-                      </span>
-                      {f.direccionSenas.trim() ? (
-                        <span className="mt-1 block text-slate-500 dark:text-slate-400">Señas: {f.direccionSenas.trim()}</span>
-                      ) : null}
-                    </span>
-                  ) : (
-                    <span className="min-w-0 whitespace-pre-wrap">{f.direccionLibre.trim()}</span>
-                  )}
-                </span>
-              </span>
-            ) : null}
-            {f.arregloEntrega.trim() ? (
-              <span className="inline-flex max-w-full flex-col gap-0.5 sm:col-span-2">
-                <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                  <Package className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-                  <span className="font-medium">Arreglo de entrega</span>
-                </span>
-                <span className="max-w-full pl-5 text-sm whitespace-pre-wrap text-slate-600 dark:text-slate-400">
-                  {f.arregloEntrega.trim()}
-                </span>
-              </span>
+        {accionesVista ? (
+          <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto">
+            <div className="flex flex-wrap gap-2">
+              {btnEditar}
+              {accionesVista.contactado}
+            </div>
+            {accionesVista.secundarias ? (
+              <div className="flex flex-wrap gap-2">{accionesVista.secundarias}</div>
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div className="shrink-0">{btnEditar}</div>
+        )}
       </div>
+
+      {esMenorDeEdad ? (
+        <BloqueEncargadoMenor
+          fechaNacimiento={f.fechaNacimiento || null}
+          encargadoNombre={f.encargadoNombre || null}
+          encargadoDocumento={f.encargadoDocumento || null}
+          encargadoTelefono={f.encargadoTelefono || null}
+          encargadoParentesco={f.encargadoParentesco || null}
+        />
+      ) : null}
+
+      <p className="mb-3 mt-5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        Información clínica y administrativa
+      </p>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+        <CeldaInfoGrid icon={Building2} label="Sucursal">
+          {farmaciaNombreVista}
+        </CeldaInfoGrid>
+        {f.empresa.trim() ? (
+          <CeldaInfoGrid icon={Briefcase} label="Empresa">
+            {f.empresa.trim()}
+          </CeldaInfoGrid>
+        ) : null}
+        {f.seguro_medico.trim() ? (
+          <CeldaInfoGrid icon={Shield} label="Seguro">
+            {f.seguro_medico.trim()}
+          </CeldaInfoGrid>
+        ) : null}
+        {f.numero_certificado.trim() ? (
+          <CeldaInfoGrid icon={BadgeCheck} label="Certificado" mono>
+            {f.numero_certificado.trim()}
+          </CeldaInfoGrid>
+        ) : null}
+        {f.numero_poliza.trim() ? (
+          <CeldaInfoGrid icon={FileText} label="Póliza" mono>
+            {f.numero_poliza.trim()}
+          </CeldaInfoGrid>
+        ) : null}
+        {lineaDireccion ? (
+          <CeldaInfoGrid icon={MapPin} label="Dirección">
+            {lineaDireccion}
+          </CeldaInfoGrid>
+        ) : null}
+        {f.tipo_pago ? (
+          <CeldaInfoGrid icon={Wallet} label="Pago">
+            {f.tipo_pago === 'directo' ? 'Directo' : 'Reembolso'}
+          </CeldaInfoGrid>
+        ) : null}
+        <CeldaInfoGrid icon={Clock} label="Últ. contacto" destacarWarning={sinRegistroContacto}>
+          {ultimoContactoLabel}
+        </CeldaInfoGrid>
+      </div>
+
+      {notasPie ? (
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/50">
+          <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <span className="font-medium text-slate-500 dark:text-slate-400">Nota: </span>
+            <span className="whitespace-pre-wrap">{notasPie}</span>
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }

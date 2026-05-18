@@ -30,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950">
       <Sidebar
         empleado={empleado}
         farmaciasFiltro={farmaciasFiltro}
