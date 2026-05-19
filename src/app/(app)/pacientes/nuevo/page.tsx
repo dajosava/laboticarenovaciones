@@ -137,7 +137,7 @@ export default function NuevoPacientePage() {
 
   const [paciente, setPaciente] = useState({
     nombre: '', telefono: '', email: '', farmacia_id: '',
-    notas: '', empresa: '', seguro_medico: '',
+    notas: '', empresa: '', seguro_medico: '', seguro_medico_secundario: '',
     tipo_pago: '' as '' | 'directo' | 'reembolso',
     numero_poliza: '', numero_certificado: '',
   })
@@ -331,6 +331,7 @@ export default function NuevoPacientePage() {
         arreglo_entrega: zonaRiesgo ? dir.arreglo.trim() : null,
         notas: paciente.notas || null,
         seguro_medico: paciente.seguro_medico || null,
+        seguro_medico_secundario: paciente.seguro_medico_secundario || null,
         numero_poliza: paciente.numero_poliza.trim() || null,
         numero_certificado: paciente.numero_certificado.trim() || null,
         tipo_pago: paciente.tipo_pago || null,
@@ -667,6 +668,14 @@ export default function NuevoPacientePage() {
               className={INPUT_CLS}
               value={paciente.seguro_medico}
               onValueChange={(v) => setPac('seguro_medico', v)}
+            />
+          </Field>
+
+          <Field label="Segunda aseguradora (opcional)">
+            <AseguradoraSelect
+              className={INPUT_CLS}
+              value={paciente.seguro_medico_secundario}
+              onValueChange={(v) => setPac('seguro_medico_secundario', v)}
             />
           </Field>
 

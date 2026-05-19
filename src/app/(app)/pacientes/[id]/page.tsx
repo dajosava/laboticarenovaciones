@@ -172,6 +172,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
               email: paciente.email,
               empresa: paciente.empresa,
               seguro_medico: paciente.seguro_medico,
+              seguro_medico_secundario: paciente.seguro_medico_secundario ?? null,
               numero_poliza: paciente.numero_poliza ?? null,
               numero_certificado: paciente.numero_certificado ?? null,
               tipo_pago: paciente.tipo_pago,

@@ -147,6 +147,7 @@ export type TarjetaDatosPacienteInicial = {
   email: string | null
   empresa: string | null
   seguro_medico: string | null
+  seguro_medico_secundario: string | null
   numero_poliza: string | null
   numero_certificado: string | null
   tipo_pago: 'directo' | 'reembolso' | null
@@ -371,6 +372,7 @@ type FormState = {
   email: string
   empresa: string
   seguro_medico: string
+  seguro_medico_secundario: string
   numero_poliza: string
   numero_certificado: string
   tipo_pago: '' | 'directo' | 'reembolso'
@@ -401,6 +403,7 @@ function fieldsFromInicial(p: TarjetaDatosPacienteInicial): FormState {
     email: p.email ?? '',
     empresa: p.empresa ?? '',
     seguro_medico: p.seguro_medico ?? '',
+    seguro_medico_secundario: p.seguro_medico_secundario ?? '',
     numero_poliza: p.numero_poliza ?? '',
     numero_certificado: p.numero_certificado ?? '',
     tipo_pago: (p.tipo_pago ?? '') as '' | 'directo' | 'reembolso',
@@ -427,6 +430,7 @@ function serializarInicial(p: TarjetaDatosPacienteInicial): string {
     email: p.email,
     empresa: p.empresa,
     seguro_medico: p.seguro_medico,
+    seguro_medico_secundario: p.seguro_medico_secundario,
     numero_poliza: p.numero_poliza,
     numero_certificado: p.numero_certificado,
     tipo_pago: p.tipo_pago,
@@ -524,6 +528,7 @@ export default function TarjetaDatosPacienteEditable({
       email: f.email.trim() || null,
       empresa: f.empresa.trim() || null,
       seguro_medico: f.seguro_medico.trim() || null,
+      seguro_medico_secundario: f.seguro_medico_secundario.trim() || null,
       numero_poliza: f.numero_poliza.trim() || null,
       numero_certificado: f.numero_certificado.trim() || null,
       tipo_pago: f.tipo_pago === 'directo' || f.tipo_pago === 'reembolso' ? f.tipo_pago : null,
@@ -679,6 +684,17 @@ export default function TarjetaDatosPacienteEditable({
                     value={f.seguro_medico}
                     valorLegacy={inicial.seguro_medico}
                     onValueChange={(v) => setF((s) => ({ ...s, seguro_medico: v }))}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                    Segunda aseguradora (opcional)
+                  </label>
+                  <AseguradoraSelect
+                    className={inputClass}
+                    value={f.seguro_medico_secundario}
+                    valorLegacy={inicial.seguro_medico_secundario}
+                    onValueChange={(v) => setF((s) => ({ ...s, seguro_medico_secundario: v }))}
                   />
                 </div>
                 <div className="space-y-3">
@@ -951,6 +967,11 @@ export default function TarjetaDatosPacienteEditable({
         {f.seguro_medico.trim() ? (
           <CeldaInfoGrid icon={Shield} label="Seguro">
             {f.seguro_medico.trim()}
+          </CeldaInfoGrid>
+        ) : null}
+        {f.seguro_medico_secundario.trim() ? (
+          <CeldaInfoGrid icon={Shield} label="Seguro 2">
+            {f.seguro_medico_secundario.trim()}
           </CeldaInfoGrid>
         ) : null}
         {f.numero_certificado.trim() ? (

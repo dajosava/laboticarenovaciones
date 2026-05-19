@@ -47,6 +47,8 @@ export interface Paciente {
   arreglo_entrega?: string | null
   empresa: string | null
   seguro_medico: string | null
+  /** Segunda aseguradora opcional, tomada del mismo catálogo aseguradoras_catalogo. */
+  seguro_medico_secundario?: string | null
   numero_poliza?: string | null
   numero_certificado?: string | null
   tipo_pago: TipoPago | null

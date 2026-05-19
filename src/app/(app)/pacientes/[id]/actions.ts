@@ -73,6 +73,7 @@ export type PayloadActualizarDatosPaciente = {
   email: string | null
   empresa: string | null
   seguro_medico: string | null
+  seguro_medico_secundario: string | null
   numero_poliza: string | null
   numero_certificado: string | null
   tipo_pago: 'directo' | 'reembolso' | null
@@ -180,6 +181,7 @@ export async function actualizarDatosPaciente(
     email: data.email?.trim() || null,
     empresa: data.empresa?.trim() || null,
     seguro_medico: data.seguro_medico?.trim() || null,
+    seguro_medico_secundario: data.seguro_medico_secundario?.trim() || null,
     numero_poliza: data.numero_poliza?.trim() || null,
     numero_certificado: data.numero_certificado?.trim() || null,
     tipo_pago: tipoPago,
