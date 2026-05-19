@@ -441,33 +441,37 @@ export default async function DashboardPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:px-8">
-      {/* Resumen del sistema */}
-      <section className="mb-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white p-5 shadow-md dark:border-slate-800 dark:from-slate-950 dark:via-slate-900/80 dark:to-slate-950 md:p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden />
-          <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-700 dark:text-slate-200">Resumen del sistema (hoy)</h2>
+      {/* Resumen del sistema (flat) */}
+      <section className="mb-4 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 dark:border-slate-700/70 dark:bg-slate-900/50 sm:px-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="inline-flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" aria-hidden />
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
+              Resumen del sistema (hoy)
+            </h2>
+          </div>
+          {nombreFiltroSucursal ? (
+            <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+              Sucursal: {nombreFiltroSucursal}
+            </span>
+          ) : null}
         </div>
-        {nombreFiltroSucursal ? (
-          <p className="mb-4 text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            Vista filtrada por sucursal: {nombreFiltroSucursal} (KPIs, resumen y tabla de renovaciones).
-          </p>
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-200/60 bg-white/60 px-4 py-3 dark:border-slate-700/60 dark:bg-slate-900/40">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Pacientes activos</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{totalPacientes ?? 0}</p>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4 sm:divide-x sm:divide-slate-200/70 sm:gap-x-0 dark:sm:divide-slate-700/70">
+          <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-start sm:justify-start sm:px-4 sm:first:pl-0 sm:last:pr-0">
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Pacientes activos</p>
+            <p className="text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-white">{totalPacientes ?? 0}</p>
           </div>
-          <div className="rounded-xl border border-slate-200/60 bg-white/60 px-4 py-3 dark:border-slate-700/60 dark:bg-slate-900/40">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Renovaciones esta semana</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{renovSemana ?? 0}</p>
+          <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-start sm:justify-start sm:px-4 sm:first:pl-0 sm:last:pr-0">
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Renovaciones esta semana</p>
+            <p className="text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-white">{renovSemana ?? 0}</p>
           </div>
-          <div className="rounded-xl border border-slate-200/60 bg-white/60 px-4 py-3 dark:border-slate-700/60 dark:bg-slate-900/40">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">% contactados (ventana 15 días)</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-brand-700 dark:text-brand-400">{pctContactadosVentana}%</p>
+          <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-start sm:justify-start sm:px-4 sm:first:pl-0 sm:last:pr-0">
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">% contactados (15 días)</p>
+            <p className="text-lg font-bold tabular-nums leading-tight text-brand-700 dark:text-brand-400">{pctContactadosVentana}%</p>
           </div>
-          <div className="rounded-xl border border-slate-200/60 bg-white/60 px-4 py-3 dark:border-slate-700/60 dark:bg-slate-900/40">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tiempo medio contacto vs vencimiento</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+          <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-start sm:justify-start sm:px-4 sm:first:pl-0 sm:last:pr-0">
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Tiempo medio contacto</p>
+            <p className="text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-white">
               {avgDiasRenovacionContacto === '—' ? '—' : `${avgDiasRenovacionContacto} días`}
             </p>
           </div>
