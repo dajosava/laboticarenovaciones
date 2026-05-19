@@ -13,6 +13,10 @@ type Props = {
   disabled?: boolean
 }
 
+type AseguradoraRow = {
+  nombre: string
+}
+
 export default function AseguradoraSelect({ value, onValueChange, className, valorLegacy, disabled }: Props) {
   const supabase = useSupabaseBrowser()
   const [cargando, setCargando] = useState(true)
@@ -28,7 +32,7 @@ export default function AseguradoraSelect({ value, onValueChange, className, val
         .eq('activa', true)
         .order('nombre')
       if (!activo) return
-      setNombres((data ?? []).map((r) => String(r.nombre)))
+      setNombres(((data ?? []) as AseguradoraRow[]).map((r) => String(r.nombre)))
       setCargando(false)
     })()
     return () => {
