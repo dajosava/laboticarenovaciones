@@ -9,6 +9,7 @@ import { registrarRenovacion } from '../../../actions'
 import type { Tratamiento } from '@/types'
 import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
 import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-brand-500'
@@ -164,6 +165,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
               <input
                 type="text"
                 value={form.marca}
+                maxLength={LIMITES_CAMPOS.marca}
                 onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))}
                 className={inputClass}
                 placeholder="Ej: Genérico, Roemmers"
@@ -174,6 +176,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
               <input
                 type="text"
                 value={form.concentracion}
+                maxLength={LIMITES_CAMPOS.concentracion}
                 onChange={(e) => setForm((f) => ({ ...f, concentracion: e.target.value }))}
                 className={inputClass}
                 placeholder="Ej: 500mg, 20mg"
@@ -291,6 +294,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                   type="text"
                   required
                   value={form.numero_factura}
+                  maxLength={LIMITES_CAMPOS.numeroFactura}
                   onChange={(e) => setForm((f) => ({ ...f, numero_factura: e.target.value }))}
                   className={inputClass}
                   placeholder="Ej: según su sistema de inventario / POS"
@@ -322,6 +326,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
               <input
                 type="text"
                 value={form.notas}
+                maxLength={LIMITES_CAMPOS.notas}
                 onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
                 className={inputClass}
                 placeholder="Ej: Paciente llevó 2 cajas"

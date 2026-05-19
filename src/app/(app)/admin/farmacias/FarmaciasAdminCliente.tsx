@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { actualizarFarmacia, crearFarmacia, eliminarFarmacia } from './actions'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 const SEP_HORARIO = ' · Horario: '
 
@@ -252,6 +253,7 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Nombre *</label>
                 <input
                   value={form.nombre}
+                  maxLength={LIMITES_CAMPOS.nombrePersona}
                   onChange={(e) => setForm((v) => ({ ...v, nombre: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -260,6 +262,7 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Ciudad</label>
                 <input
                   value={form.ciudad}
+                  maxLength={LIMITES_CAMPOS.ciudad}
                   onChange={(e) => setForm((v) => ({ ...v, ciudad: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -268,6 +271,7 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Teléfono</label>
                 <input
                   value={form.telefono}
+                  maxLength={LIMITES_CAMPOS.telefono}
                   onChange={(e) => setForm((v) => ({ ...v, telefono: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -276,6 +280,7 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Dirección *</label>
                 <input
                   value={form.direccion}
+                  maxLength={LIMITES_CAMPOS.direccion}
                   onChange={(e) => setForm((v) => ({ ...v, direccion: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -284,6 +289,7 @@ export default function FarmaciasAdminCliente({ iniciales }: { iniciales: Farmac
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Horario (opcional)</label>
                 <input
                   value={form.horario}
+                  maxLength={LIMITES_CAMPOS.direccion}
                   onChange={(e) => setForm((v) => ({ ...v, horario: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />

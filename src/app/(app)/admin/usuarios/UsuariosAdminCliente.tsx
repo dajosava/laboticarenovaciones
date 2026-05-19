@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { actualizarEmpleado, crearEmpleado, resolverUuidPorCorreo } from './actions'
 import type { Rol } from '@/types'
 import { cn } from '@/lib/utils'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 export type EmpleadoListRow = {
   id: string
@@ -252,7 +253,9 @@ export default function UsuariosAdminCliente({
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Correo (Auth)</label>
                 <div className="flex gap-2">
                   <input
+                    type="email"
                     value={nuevo.email}
+                    maxLength={LIMITES_CAMPOS.email}
                     onChange={(e) => setNuevo((s) => ({ ...s, email: e.target.value }))}
                     className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                     placeholder="nuevo@empresa.com"
@@ -272,6 +275,7 @@ export default function UsuariosAdminCliente({
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">UUID usuario (Auth) *</label>
                 <input
                   value={nuevo.authUserId}
+                  maxLength={36}
                   onChange={(e) => setNuevo((s) => ({ ...s, authUserId: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -281,6 +285,7 @@ export default function UsuariosAdminCliente({
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Nombre en sistema *</label>
                 <input
                   value={nuevo.nombre}
+                  maxLength={LIMITES_CAMPOS.nombrePersona}
                   onChange={(e) => setNuevo((s) => ({ ...s, nombre: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -347,7 +352,9 @@ export default function UsuariosAdminCliente({
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Correo</label>
                 <input
+                  type="email"
                   value={edit.email}
+                  maxLength={LIMITES_CAMPOS.email}
                   onChange={(e) => setEdit((s) => (s ? { ...s, email: e.target.value } : s))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
@@ -356,6 +363,7 @@ export default function UsuariosAdminCliente({
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Nombre *</label>
                 <input
                   value={edit.nombre}
+                  maxLength={LIMITES_CAMPOS.nombrePersona}
                   onChange={(e) => setEdit((s) => (s ? { ...s, nombre: e.target.value } : s))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />

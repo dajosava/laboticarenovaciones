@@ -2,14 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { Check, CheckCircle2, Undo2 } from 'lucide-react'
 import { marcarContactadoRenovacion, desmarcarContactadoRenovacion } from './actions'
 import { toast } from 'sonner'
 
 type Props = {
   tratamientoId: string
   contactado: boolean
-  variant?: 'default' | 'ficha'
+  variant?: 'default' | 'ficha' | 'panel'
 }
 
 export default function BotonContactadoRenovacion({ tratamientoId, contactado, variant = 'default' }: Props) {
@@ -41,6 +41,20 @@ export default function BotonContactadoRenovacion({ tratamientoId, contactado, v
   }
 
   if (contactado) {
+    if (variant === 'panel') {
+      return (
+        <button
+          type="button"
+          onClick={handleDesmarcar}
+          disabled={loading}
+          title="Desmarcar contacto"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-amber-500 bg-amber-500/15 text-amber-700 shadow-sm transition hover:brightness-95 disabled:opacity-50 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-200 dark:hover:brightness-110"
+        >
+          <Undo2 className="h-4 w-4" aria-hidden />
+          <span className="sr-only">{loading ? 'Procesando…' : 'Desmarcar contacto'}</span>
+        </button>
+      )
+    }
     return (
       <button
         type="button"
@@ -53,6 +67,21 @@ export default function BotonContactadoRenovacion({ tratamientoId, contactado, v
         }
       >
         {loading ? '…' : 'Desmarcar'}
+      </button>
+    )
+  }
+
+  if (variant === 'panel') {
+    return (
+      <button
+        type="button"
+        onClick={handleMarcar}
+        disabled={loading}
+        title="Contactado"
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-emerald-500 bg-emerald-500/15 text-emerald-700 shadow-sm transition hover:brightness-95 disabled:opacity-50 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:brightness-110"
+      >
+        <Check className="h-4 w-4" aria-hidden />
+        <span className="sr-only">{loading ? 'Procesando…' : 'Marcar como contactado'}</span>
       </button>
     )
   }

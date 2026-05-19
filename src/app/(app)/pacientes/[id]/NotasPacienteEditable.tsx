@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { PencilLine, StickyNote } from 'lucide-react'
 import { PieSeccionFicha } from '@/components/pacientes/ficha-seccion'
 import { actualizarNotasPaciente } from './actions'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 export default function NotasPacienteEditable({
   pacienteId,
@@ -47,6 +48,7 @@ export default function NotasPacienteEditable({
         </label>
         <textarea
           value={notas}
+          maxLength={LIMITES_CAMPOS.notas}
           onChange={(e) => setNotas(e.target.value)}
           rows={3}
           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"

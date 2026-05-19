@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
-import { actualizarMedicamento, crearMedicamento, importarMedicamentosDesdeTexto } from './actions'
+import {
+  actualizarMedicamento,
+  actualizarSustitutoVademecum,
+  crearMedicamento,
+  importarMedicamentosDesdeTexto,
+} from './actions'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 /**
  * Carga masiva desde Excel (pegar como TSV). Por defecto está oculta en la UI.
@@ -20,6 +26,7 @@ export type MedicamentoRow = {
   marca: string | null
   concentracion: string | null
   activo: boolean
+  tiene_sustituto_vademecum: boolean
   creado_en: string
 }
 
@@ -41,6 +48,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
 
   const [altaCodigo, setAltaCodigo] = useState('')
   const [altaDescripcion, setAltaDescripcion] = useState('')
+  const [altaSustitutoVademecum, setAltaSustitutoVademecum] = useState(false)
   const [altaPanelAbierto, setAltaPanelAbierto] = useState(false)
   const [textoImportMasivo, setTextoImportMasivo] = useState('')
   const [importandoMasivo, setImportandoMasivo] = useState(false)
@@ -50,7 +58,12 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
   const [form, setForm] = useState({ codigo: '', descripcion: '' })
   const [guardando, setGuardando] = useState(false)
 
-  const filas = iniciales
+  const [filas, setFilas] = useState<MedicamentoRow[]>(iniciales)
+  const [vademecumLoadingId, setVademecumLoadingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setFilas(iniciales)
+  }, [iniciales])
 
   useEffect(() => {
     const enBusqueda = document.activeElement === inputBusquedaRef.current
@@ -98,6 +111,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
       const r = await crearMedicamento({
         codigo: altaCodigo.trim() || null,
         descripcion: altaDescripcion,
+        tieneSustitutoVademecum: altaSustitutoVademecum,
       })
       if (r.error) {
         toast.error(r.error)
@@ -106,6 +120,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
       toast.success('Medicamento registrado')
       setAltaCodigo('')
       setAltaDescripcion('')
+      setAltaSustitutoVademecum(false)
       router.refresh()
     } finally {
       setGuardando(false)
@@ -131,6 +146,26 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
     } finally {
       setGuardando(false)
     }
+  }
+
+  async function toggleSustitutoVademecum(m: MedicamentoRow, nuevoValor: boolean) {
+    setVademecumLoadingId(m.id)
+    setFilas((prev) =>
+      prev.map((row) => (row.id === m.id ? { ...row, tiene_sustituto_vademecum: nuevoValor } : row)),
+    )
+    const r = await actualizarSustitutoVademecum(m.id, nuevoValor)
+    setVademecumLoadingId(null)
+    if (r.error) {
+      setFilas((prev) =>
+        prev.map((row) => (row.id === m.id ? { ...row, tiene_sustituto_vademecum: !nuevoValor } : row)),
+      )
+      toast.error(r.error)
+      return
+    }
+    toast.success(
+      nuevoValor ? 'Marcado: tiene sustituto en vademecum' : 'Marcado: sin sustituto en vademecum',
+    )
+    router.refresh()
   }
 
   async function toggleActivo(m: MedicamentoRow) {
@@ -208,6 +243,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
                 id="alta-codigo"
                 type="text"
                 value={altaCodigo}
+                maxLength={LIMITES_CAMPOS.codigoMedicamento}
                 onChange={(e) => setAltaCodigo(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 placeholder="Ej: MED-00004"
@@ -221,11 +257,27 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
               <textarea
                 id="alta-descripcion"
                 value={altaDescripcion}
+                maxLength={LIMITES_CAMPOS.descripcionMedicamento}
                 onChange={(e) => setAltaDescripcion(e.target.value)}
                 rows={3}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 placeholder="Texto completo como en inventario / receta"
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="alta-vademecum"
+                className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+              >
+                <input
+                  id="alta-vademecum"
+                  type="checkbox"
+                  checked={altaSustitutoVademecum}
+                  onChange={(e) => setAltaSustitutoVademecum(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                Tiene sustituto en el vademecum
+              </label>
             </div>
             <div className="sm:col-span-2 flex flex-wrap gap-2">
               <button
@@ -241,6 +293,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
                 onClick={() => {
                   setAltaCodigo('')
                   setAltaDescripcion('')
+                  setAltaSustitutoVademecum(false)
                 }}
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
               >
@@ -291,16 +344,16 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-3">
           <input
             ref={inputBusquedaRef}
             type="search"
             value={busquedaLocal}
             onChange={(e) => setBusquedaLocal(e.target.value)}
             placeholder="Buscar en todo el catálogo (código, descripción, nombre…)"
-            className="min-w-[200px] flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 sm:max-w-md"
+            className="w-full min-w-[280px] flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 sm:max-w-2xl"
           />
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <label className="flex shrink-0 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input
               type="checkbox"
               checked={soloActivosLocal}
@@ -318,6 +371,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Nº artículo</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Descripción</th>
+                <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">Vademecum</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Estado</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Acciones</th>
             </tr>
@@ -329,6 +383,29 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
                   {m.codigo?.trim() ? m.codigo : '—'}
                 </td>
                 <td className="max-w-xl px-4 py-3 text-slate-900 dark:text-slate-100">{m.descripcion ?? m.nombre}</td>
+                <td className="px-4 py-3 text-center">
+                  <label
+                    className="inline-flex cursor-pointer items-center justify-center"
+                    title={
+                      m.tiene_sustituto_vademecum
+                        ? 'Tiene sustituto registrado en el vademecum'
+                        : 'Sin sustituto registrado en el vademecum'
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={m.tiene_sustituto_vademecum}
+                      disabled={vademecumLoadingId === m.id}
+                      onChange={(e) => void toggleSustitutoVademecum(m, e.target.checked)}
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:cursor-wait disabled:opacity-50"
+                      aria-label={
+                        m.tiene_sustituto_vademecum
+                          ? 'Desmarcar sustituto en vademecum'
+                          : 'Marcar como con sustituto en vademecum'
+                      }
+                    />
+                  </label>
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={
@@ -374,6 +451,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Número de artículo</label>
                 <input
                   value={form.codigo}
+                  maxLength={LIMITES_CAMPOS.codigoMedicamento}
                   onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                   placeholder="Ej: MED-00004"
@@ -383,6 +461,7 @@ export default function MedicamentosAdminCliente({ iniciales }: Props) {
                 <label className="mb-1 block text-xs font-semibold uppercase text-slate-500">Descripción del artículo *</label>
                 <textarea
                   value={form.descripcion}
+                  maxLength={LIMITES_CAMPOS.descripcionMedicamento}
                   onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
                   rows={3}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"

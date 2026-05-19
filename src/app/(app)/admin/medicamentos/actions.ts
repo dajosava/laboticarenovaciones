@@ -28,6 +28,7 @@ export async function crearMedicamento(input: {
   descripcion: string
   marca?: string | null
   concentracion?: string | null
+  tieneSustitutoVademecum?: boolean
 }): Promise<{ error?: string; id?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -47,6 +48,7 @@ export async function crearMedicamento(input: {
       marca: input.marca?.trim() || null,
       concentracion: input.concentracion?.trim() || null,
       activo: true,
+      tiene_sustituto_vademecum: input.tieneSustitutoVademecum ?? false,
     })
     .select('id')
     .single()
@@ -90,6 +92,27 @@ export async function actualizarMedicamento(
   })
 
   const { error } = await supabase.from('medicamentos').update(payload).eq('id', id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/medicamentos')
+  return {}
+}
+
+export async function actualizarSustitutoVademecum(
+  id: string,
+  tieneSustituto: boolean,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { error } = await supabase
+    .from('medicamentos')
+    .update({
+      tiene_sustituto_vademecum: tieneSustituto,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq('id', id)
 
   if (error) return { error: error.message }
   revalidatePath('/admin/medicamentos')

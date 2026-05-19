@@ -1,0 +1,29 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import AseguradorasAdminCliente, { type AseguradoraCatalogoRow } from './AseguradorasAdminCliente'
+
+export default async function AdminAseguradorasPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: empleado } = await supabase.from('empleados').select('rol, activo').eq('id', user.id).single()
+  if (!empleado?.activo || empleado.rol !== 'super_admin') {
+    redirect('/dashboard')
+  }
+
+  const { data: lista } = await supabase
+    .from('aseguradoras_catalogo')
+    .select('id, nombre, activa, creado_en')
+    .order('nombre')
+
+  const filas = (lista ?? []) as AseguradoraCatalogoRow[]
+
+  return (
+    <div className="mx-auto max-w-4xl p-6">
+      <AseguradorasAdminCliente iniciales={filas} />
+    </div>
+  )
+}

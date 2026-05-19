@@ -13,6 +13,7 @@ import { CalendarDays, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { differenceInDays, format, parseISO, startOfWeek, subDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import DashboardRenovacionesClient, { type DashboardRow } from './DashboardRenovacionesClient'
+import { PANEL_KPI_CHIP, PANEL_LINK_PACIENTES, PANEL_VISTA_SEGMENT, PANEL_VISTA_WRAP } from './panel-renovaciones-ui'
 
 type FiltroVer = 'pendientes' | 'contactados' | 'todos'
 type FiltroNivel = 'vencidos' | 'critico' | 'urgente' | 'planificacion'
@@ -526,7 +527,7 @@ export default async function DashboardPage({
       <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/80 md:px-5">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Renovaciones</h2>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
             {activeFiltrosNivel.size > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs text-slate-500">KPI:</span>
@@ -535,7 +536,7 @@ export default async function DashboardPage({
                     <Link
                       key={nivel}
                       href={buildUrlFiltros(ver, activeFiltrosNivel, nivel)}
-                      className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
+                      className={PANEL_KPI_CHIP}
                     >
                       {nivel === 'vencidos' && 'Vencidos'}
                       {nivel === 'critico' && 'Crítico'}
@@ -548,12 +549,12 @@ export default async function DashboardPage({
               </div>
             )}
             <span className="text-xs text-slate-500">Vista:</span>
-            <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
+            <div className={PANEL_VISTA_WRAP}>
               <Link
                 href={buildUrlFiltros('pendientes', activeFiltrosNivel)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-semibold transition sm:text-sm',
-                  ver === 'pendientes' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900',
+                  PANEL_VISTA_SEGMENT.base,
+                  ver === 'pendientes' ? PANEL_VISTA_SEGMENT.pendientesActive : PANEL_VISTA_SEGMENT.pendientesInactive,
                 )}
               >
                 No contactados
@@ -561,8 +562,8 @@ export default async function DashboardPage({
               <Link
                 href={buildUrlFiltros('contactados', activeFiltrosNivel)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-semibold transition sm:text-sm',
-                  ver === 'contactados' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900',
+                  PANEL_VISTA_SEGMENT.base,
+                  ver === 'contactados' ? PANEL_VISTA_SEGMENT.contactadosActive : PANEL_VISTA_SEGMENT.contactadosInactive,
                 )}
               >
                 Contactados
@@ -570,14 +571,14 @@ export default async function DashboardPage({
               <Link
                 href={buildUrlFiltros('todos', activeFiltrosNivel)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-semibold transition sm:text-sm',
-                  ver === 'todos' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900',
+                  PANEL_VISTA_SEGMENT.base,
+                  ver === 'todos' ? PANEL_VISTA_SEGMENT.todosActive : PANEL_VISTA_SEGMENT.todosInactive,
                 )}
               >
                 Todos
               </Link>
             </div>
-            <Link href="/pacientes" className="text-xs font-semibold text-brand-700 hover:underline dark:text-brand-400 sm:text-sm">
+            <Link href="/pacientes" className={PANEL_LINK_PACIENTES}>
               Pacientes →
             </Link>
           </div>

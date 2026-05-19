@@ -12,6 +12,7 @@ import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
 import { PROVINCIAS_CR, cantonesPorProvincia, distritosPorProvinciaCanton } from '@/lib/costa-rica/direccion-cr'
 import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
 import EmpresaCombobox from '@/components/pacientes/EmpresaCombobox'
+import AseguradoraSelect from '@/components/pacientes/AseguradoraSelect'
 import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
 import { MIN_CARACTERES_ARREGLO_ENTREGA, coincidenciasRiesgoEntrega } from '@/lib/entrega/lugares-riesgo-entrega'
 import {
@@ -20,10 +21,10 @@ import {
   ZONA_RIESGO_TEXTAREA,
   ZONA_RIESGO_TITULO,
 } from '@/lib/entrega/zona-riesgo-ui'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 const PADRON_API_URL = process.env.NEXT_PUBLIC_SUPABASE_URL_PADRON || ''
 const PADRON_API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PADRON || ''
-const SEGUROS_MEDICOS = ['INS','Pan American Life Insurance','ASSA','BMI','MAPFRE','Mediprocesos','Koris Insurance','Best Doctors Insurance','Adisa']
 const INPUT_CLS =
   'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-emerald-500/80'
 /** Cuadrícula de secciones del formulario: 1 col móvil, 2 en tablet, 3 en escritorio ancho. */
@@ -490,6 +491,7 @@ export default function NuevoPacientePage() {
                 <input
                   className={INPUT_CLS}
                   value={cedula}
+                  maxLength={LIMITES_CAMPOS.documento}
                   placeholder={clasificacion === 'extranjero' ? 'Opcional si tiene otro documento' : 'Ej: 208750176'}
                   onChange={(e) => setCedula(e.target.value)}
                   onKeyDown={(e) =>
@@ -517,11 +519,13 @@ export default function NuevoPacientePage() {
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Pasaporte">
-                  <input className={INPUT_CLS} value={pasaporteDoc} placeholder="Número de pasaporte"
+                  <input className={INPUT_CLS} value={pasaporteDoc} maxLength={LIMITES_CAMPOS.documento}
+                    placeholder="Número de pasaporte"
                     onChange={(e) => setPasaporteDoc(e.target.value)} />
                 </Field>
                 <Field label="DIMEX u otro documento de residencia">
-                  <input className={INPUT_CLS} value={dimexDoc} placeholder="Número DIMEX"
+                  <input className={INPUT_CLS} value={dimexDoc} maxLength={LIMITES_CAMPOS.documento}
+                    placeholder="Número DIMEX"
                     onChange={(e) => setDimexDoc(e.target.value)} />
                 </Field>
               </div>
@@ -542,25 +546,29 @@ export default function NuevoPacientePage() {
                 </div>
                 <div className="xl:col-span-5">
                   <Field label="Nombre completo del encargado" required>
-                    <input className={INPUT_CLS} value={encargadoNombre} placeholder="Nombre y apellidos"
+                    <input className={INPUT_CLS} value={encargadoNombre} maxLength={LIMITES_CAMPOS.nombreEncargado}
+                      placeholder="Nombre y apellidos"
                       onChange={(e) => setEncargadoNombre(normalizarNombrePersona(e.target.value))} />
                   </Field>
                 </div>
                 <div className="xl:col-span-2">
                   <Field label="Documento de identidad" required>
-                    <input className={INPUT_CLS} value={encargadoDocumento} placeholder="Cédula u otro ID"
+                    <input className={INPUT_CLS} value={encargadoDocumento} maxLength={LIMITES_CAMPOS.documento}
+                      placeholder="Cédula u otro ID"
                       onChange={(e) => setEncargadoDocumento(e.target.value)} />
                   </Field>
                 </div>
                 <div className="xl:col-span-3">
                   <Field label="Teléfono / WhatsApp" required>
-                    <input className={INPUT_CLS} type="tel" value={encargadoTelefono} placeholder="88881234"
+                    <input className={INPUT_CLS} type="tel" value={encargadoTelefono} maxLength={LIMITES_CAMPOS.telefono}
+                      placeholder="88881234"
                       onChange={(e) => setEncargadoTelefono(e.target.value)} />
                   </Field>
                 </div>
                 <div className="sm:col-span-2 xl:col-span-12">
                   <Field label="Parentesco o relación con el menor" required>
-                    <input className={INPUT_CLS} value={encargadoParentesco} placeholder="Ej: madre, padre, tutor legal"
+                    <input className={INPUT_CLS} value={encargadoParentesco} maxLength={LIMITES_CAMPOS.parentesco}
+                      placeholder="Ej: madre, padre, tutor legal"
                       onChange={(e) => setEncargadoParentesco(e.target.value)} />
                   </Field>
                 </div>
@@ -570,7 +578,7 @@ export default function NuevoPacientePage() {
 
           <div className={FORM_SPAN_FULL}>
             <Field label="Nombre completo" required>
-              <input className={INPUT_CLS} required value={paciente.nombre}
+              <input className={INPUT_CLS} required value={paciente.nombre} maxLength={LIMITES_CAMPOS.nombrePersona}
                 placeholder={
                   clasificacion === 'padron_nacional'
                     ? 'Buscar por cédula o escribir manualmente'
@@ -588,12 +596,14 @@ export default function NuevoPacientePage() {
           </div>
 
           <Field label="Teléfono / WhatsApp" required>
-            <input className={INPUT_CLS} type="tel" required value={paciente.telefono} placeholder="88881234"
+            <input className={INPUT_CLS} type="tel" required value={paciente.telefono} maxLength={LIMITES_CAMPOS.telefono}
+              placeholder="88881234"
               onChange={e => setPac('telefono', e.target.value)} />
           </Field>
 
           <Field label="Email">
-            <input className={INPUT_CLS} type="email" value={paciente.email} placeholder="correo@ejemplo.com"
+            <input className={INPUT_CLS} type="email" value={paciente.email} maxLength={LIMITES_CAMPOS.email}
+              placeholder="correo@ejemplo.com"
               onChange={e => setPac('email', e.target.value)} />
           </Field>
 
@@ -622,7 +632,8 @@ export default function NuevoPacientePage() {
             </div>
             <div className="mt-4">
               <Field label="Señas / detalle (opcional)">
-                <input className={INPUT_CLS} value={dir.senas} placeholder="Ej: 200 m norte del parque, casa azul"
+                <input className={INPUT_CLS} value={dir.senas} maxLength={LIMITES_CAMPOS.direccion}
+                  placeholder="Ej: 200 m norte del parque, casa azul"
                   onChange={e => setDirField('senas', e.target.value)} />
               </Field>
             </div>
@@ -635,6 +646,7 @@ export default function NuevoPacientePage() {
                 </p>
                 <Field label="Arreglo de entrega" required hint={`Mínimo ${MIN_CARACTERES_ARREGLO_ENTREGA} caracteres.`}>
                   <textarea id="arreglo-entrega-paciente" rows={3} required value={dir.arreglo}
+                    maxLength={LIMITES_CAMPOS.arregloEntrega}
                     onChange={e => setDirField('arreglo', e.target.value)}
                     className={ZONA_RIESGO_TEXTAREA}
                     placeholder="Ej: entrega en oficinas del Hospital México, recepción, lunes a viernes 9–17 h" />
@@ -651,20 +663,22 @@ export default function NuevoPacientePage() {
           </div>
 
           <Field label="Seguro médico">
-            <select className={INPUT_CLS} value={paciente.seguro_medico}
-              onChange={e => setPac('seguro_medico', e.target.value)}>
-              <option value="">Seleccionar...</option>
-              {SEGUROS_MEDICOS.map(s => <option key={s}>{s}</option>)}
-            </select>
+            <AseguradoraSelect
+              className={INPUT_CLS}
+              value={paciente.seguro_medico}
+              onValueChange={(v) => setPac('seguro_medico', v)}
+            />
           </Field>
 
           <Field label="Número de póliza">
-            <input className={INPUT_CLS} value={paciente.numero_poliza} placeholder="Según póliza del seguro"
+            <input className={INPUT_CLS} value={paciente.numero_poliza} maxLength={LIMITES_CAMPOS.documento}
+              placeholder="Según póliza del seguro"
               onChange={e => setPac('numero_poliza', e.target.value)} autoComplete="off" />
           </Field>
 
           <Field label="Número de certificado">
-            <input className={INPUT_CLS} value={paciente.numero_certificado} placeholder="Según certificado"
+            <input className={INPUT_CLS} value={paciente.numero_certificado} maxLength={LIMITES_CAMPOS.documento}
+              placeholder="Según certificado"
               onChange={e => setPac('numero_certificado', e.target.value)} autoComplete="off" />
           </Field>
 
@@ -710,7 +724,7 @@ export default function NuevoPacientePage() {
 
           <div className="md:col-span-2 xl:col-span-1">
             <Field label="Notas / preferencias (opcional)">
-              <input className={INPUT_CLS} value={paciente.notas}
+              <input className={INPUT_CLS} value={paciente.notas} maxLength={LIMITES_CAMPOS.notas}
                 placeholder="Ej: prefiere contacto por WhatsApp"
                 onChange={e => setPac('notas', e.target.value)} />
             </Field>
@@ -786,6 +800,7 @@ export default function NuevoPacientePage() {
                     <input
                       className={INPUT_CLS}
                       value={trat.marca}
+                      maxLength={LIMITES_CAMPOS.marca}
                       placeholder="Ej: Genérico"
                       onChange={(e) => setTratField(idx, 'marca', e.target.value)}
                     />
@@ -795,6 +810,7 @@ export default function NuevoPacientePage() {
                     <input
                       className={INPUT_CLS}
                       value={trat.concentracion}
+                      maxLength={LIMITES_CAMPOS.concentracion}
                       placeholder="Ej: 500mg"
                       onChange={(e) => setTratField(idx, 'concentracion', e.target.value)}
                     />
@@ -804,6 +820,7 @@ export default function NuevoPacientePage() {
                     <input
                       className={INPUT_CLS}
                       value={trat.medico_receta_id}
+                      maxLength={LIMITES_CAMPOS.documento}
                       autoComplete="off"
                       placeholder="Ej: código profesional o ID interno"
                       onChange={(e) => setTratField(idx, 'medico_receta_id', e.target.value)}
@@ -862,6 +879,7 @@ export default function NuevoPacientePage() {
                     <input
                       className={INPUT_CLS}
                       value={trat.numero_factura}
+                      maxLength={LIMITES_CAMPOS.numeroFactura}
                       autoComplete="off"
                       placeholder="Según inventario / POS"
                       onChange={(e) => setTratField(idx, 'numero_factura', e.target.value)}

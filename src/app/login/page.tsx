@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { useTheme } from '@/components/layout/ThemeProvider'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 const LAST_LOGIN_KEY = 'farmarenovar-last-login-at'
 const REMEMBER_KEY = 'farmarenovar-remember-session'
@@ -57,8 +58,9 @@ function FloatingInput(props: {
   icon: typeof Mail
   error?: string
   disabled?: boolean
+  maxLength?: number
 }) {
-  const { id, label, type, value, onChange, placeholder, autoComplete, icon: Icon, error, disabled } = props
+  const { id, label, type, value, onChange, placeholder, autoComplete, icon: Icon, error, disabled, maxLength } = props
 
   return (
     <div>
@@ -86,6 +88,7 @@ function FloatingInput(props: {
               value={value}
               disabled={disabled}
               autoComplete={autoComplete}
+              maxLength={maxLength}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
               className={cn(
@@ -299,6 +302,7 @@ function LoginPageContent() {
                   icon={Mail}
                   error={fieldErrors.email}
                   disabled={loading}
+                  maxLength={LIMITES_CAMPOS.email}
                 />
 
                 <FloatingInput

@@ -8,10 +8,12 @@ export type MedicamentoAdminRow = {
   marca: string | null
   concentracion: string | null
   activo: boolean
+  tiene_sustituto_vademecum: boolean
   creado_en: string
 }
 
-const MED_SELECT = 'id, codigo, descripcion, nombre, marca, concentracion, activo, creado_en'
+const MED_SELECT =
+  'id, codigo, descripcion, nombre, marca, concentracion, activo, tiene_sustituto_vademecum, creado_en'
 
 /** Comodines ILIKE en PostgreSQL: escapar \ % _ */
 function escapeSqlIlike(s: string): string {

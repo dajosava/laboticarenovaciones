@@ -7,37 +7,37 @@ import { toast } from 'sonner'
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  actualizarEmpresaCatalogo,
-  crearEmpresaCatalogo,
-  eliminarEmpresaCatalogo,
-  establecerEmpresaActiva,
+  actualizarAseguradoraCatalogo,
+  crearAseguradoraCatalogo,
+  eliminarAseguradoraCatalogo,
+  establecerAseguradoraActiva,
 } from './actions'
 import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
-export type EmpresaCatalogoRow = {
+export type AseguradoraCatalogoRow = {
   id: string
   nombre: string
   activa: boolean
   creado_en: string
 }
 
-export default function EmpresasAdminCliente({ iniciales }: { iniciales: EmpresaCatalogoRow[] }) {
+export default function AseguradorasAdminCliente({ iniciales }: { iniciales: AseguradoraCatalogoRow[] }) {
   const router = useRouter()
   const [guardando, setGuardando] = useState(false)
   const [modalNuevo, setModalNuevo] = useState(false)
-  const [modalEditar, setModalEditar] = useState<EmpresaCatalogoRow | null>(null)
+  const [modalEditar, setModalEditar] = useState<AseguradoraCatalogoRow | null>(null)
   const [nombreNuevo, setNombreNuevo] = useState('')
   const [nombreEdit, setNombreEdit] = useState('')
 
   async function onCrear() {
     setGuardando(true)
-    const r = await crearEmpresaCatalogo(nombreNuevo)
+    const r = await crearAseguradoraCatalogo(nombreNuevo)
     setGuardando(false)
     if (r.error) {
       toast.error(r.error)
       return
     }
-    toast.success('Empresa creada')
+    toast.success('Aseguradora creada')
     setModalNuevo(false)
     setNombreNuevo('')
     router.refresh()
@@ -46,52 +46,52 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
   async function onGuardarEdicion() {
     if (!modalEditar) return
     setGuardando(true)
-    const r = await actualizarEmpresaCatalogo(modalEditar.id, nombreEdit)
+    const r = await actualizarAseguradoraCatalogo(modalEditar.id, nombreEdit)
     setGuardando(false)
     if (r.error) {
       toast.error(r.error)
       return
     }
-    toast.success('Empresa actualizada')
+    toast.success('Aseguradora actualizada')
     setModalEditar(null)
     router.refresh()
   }
 
-  async function onEliminar(row: EmpresaCatalogoRow) {
+  async function onEliminar(row: AseguradoraCatalogoRow) {
     const msg =
       `¿Eliminar permanentemente «${row.nombre}» del catálogo?\n\n` +
-      'Esto no borra el texto en fichas de pacientes que ya tengan esa empresa guardada; solo quita la opción del listado al dar de alta nuevos pacientes.'
+      'Esto no borra el texto en fichas de pacientes que ya tengan esa aseguradora guardada; solo quita la opción del listado al registrar nuevos pacientes.'
     if (!window.confirm(msg)) return
     setGuardando(true)
-    const r = await eliminarEmpresaCatalogo(row.id)
+    const r = await eliminarAseguradoraCatalogo(row.id)
     setGuardando(false)
     if (r.error) {
       toast.error(r.error)
       return
     }
-    toast.success('Empresa eliminada del catálogo')
+    toast.success('Aseguradora eliminada del catálogo')
     if (modalEditar?.id === row.id) setModalEditar(null)
     router.refresh()
   }
 
-  async function toggleActiva(row: EmpresaCatalogoRow) {
+  async function toggleActiva(row: AseguradoraCatalogoRow) {
     const siguiente = !row.activa
     const ok = siguiente
       ? true
       : window.confirm(`¿Desactivar «${row.nombre}»? Dejará de aparecer al registrar pacientes.`)
     if (!ok) return
     setGuardando(true)
-    const r = await establecerEmpresaActiva(row.id, siguiente)
+    const r = await establecerAseguradoraActiva(row.id, siguiente)
     setGuardando(false)
     if (r.error) {
       toast.error(r.error)
       return
     }
-    toast.success(siguiente ? 'Empresa reactivada' : 'Empresa desactivada')
+    toast.success(siguiente ? 'Aseguradora reactivada' : 'Aseguradora desactivada')
     router.refresh()
   }
 
-  function abrirEditar(row: EmpresaCatalogoRow) {
+  function abrirEditar(row: AseguradoraCatalogoRow) {
     setNombreEdit(row.nombre)
     setModalEditar(row)
   }
@@ -100,9 +100,9 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Empresas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Aseguradoras</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Catálogo usado al registrar pacientes. Solo super administrador puede modificarlo.
+            Catálogo de seguros médicos usado al registrar pacientes. Solo super administrador puede modificarlo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -120,7 +120,7 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
             }}
             className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700"
           >
-            + Nueva empresa
+            + Nueva aseguradora
           </button>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
                     disabled={guardando}
                     onClick={() => void onEliminar(row)}
                     title="Eliminar del catálogo"
-                    aria-label={`Eliminar empresa «${row.nombre}» del catálogo`}
+                    aria-label={`Eliminar aseguradora «${row.nombre}» del catálogo`}
                     className="inline-flex rounded-lg p-1.5 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/15"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
@@ -183,21 +183,21 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
           </tbody>
         </table>
         {iniciales.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No hay empresas en el catálogo.</p>
+          <p className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No hay aseguradoras en el catálogo.</p>
         ) : null}
       </div>
 
       {modalNuevo ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Nueva empresa</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Nueva aseguradora</h2>
             <label className="mt-4 block text-xs font-semibold uppercase text-slate-500">Nombre *</label>
             <input
               value={nombreNuevo}
-              maxLength={LIMITES_CAMPOS.empresa}
+              maxLength={LIMITES_CAMPOS.aseguradora}
               onChange={(e) => setNombreNuevo(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="Nombre legal o comercial"
+              placeholder="Ej. MAPFRE, ASSA, INS"
               autoFocus
             />
             <div className="mt-6 flex justify-end gap-2">
@@ -224,12 +224,12 @@ export default function EmpresasAdminCliente({ iniciales }: { iniciales: Empresa
       {modalEditar ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar empresa</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Editar aseguradora</h2>
             <p className="mt-1 font-mono text-xs text-slate-500">{modalEditar.id}</p>
             <label className="mt-4 block text-xs font-semibold uppercase text-slate-500">Nombre *</label>
             <input
               value={nombreEdit}
-              maxLength={LIMITES_CAMPOS.empresa}
+              maxLength={LIMITES_CAMPOS.aseguradora}
               onChange={(e) => setNombreEdit(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
             />

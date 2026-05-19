@@ -8,6 +8,7 @@ import { calcularFechaVencimiento, parseMontoFacturaInput } from '@/lib/utils'
 import { toast } from 'sonner'
 import MedicamentoCombobox from '@/components/medicamentos/MedicamentoCombobox'
 import { textoMedicamentoParaReceta } from '@/lib/medicamentos-import'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 export default function NuevoTratamientoPage() {
   const router = useRouter()
@@ -188,6 +189,7 @@ export default function NuevoTratamientoPage() {
               <input
                 type="text"
                 value={tratamiento.marca}
+                maxLength={LIMITES_CAMPOS.marca}
                 onChange={e => setTratamiento(t => ({ ...t, marca: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Ej: Genérico, Roemmers"
@@ -198,6 +200,7 @@ export default function NuevoTratamientoPage() {
               <input
                 type="text"
                 value={tratamiento.concentracion}
+                maxLength={LIMITES_CAMPOS.concentracion}
                 onChange={e => setTratamiento(t => ({ ...t, concentracion: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Ej: 500mg, 20mg"
@@ -208,6 +211,7 @@ export default function NuevoTratamientoPage() {
               <input
                 type="text"
                 value={tratamiento.medico_receta_id}
+                maxLength={LIMITES_CAMPOS.documento}
                 onChange={(e) => setTratamiento((t) => ({ ...t, medico_receta_id: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Identificador del médico que emitió la receta (opcional)"
@@ -283,6 +287,7 @@ export default function NuevoTratamientoPage() {
                   type="text"
                   required
                   value={tratamiento.numero_factura}
+                  maxLength={LIMITES_CAMPOS.numeroFactura}
                   onChange={(e) => setTratamiento((t) => ({ ...t, numero_factura: e.target.value }))}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Según inventario / POS de la farmacia"
@@ -313,6 +318,7 @@ export default function NuevoTratamientoPage() {
               <input
                 type="text"
                 value={tratamiento.notas}
+                maxLength={LIMITES_CAMPOS.notas}
                 onChange={e => setTratamiento(t => ({ ...t, notas: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Observaciones del tratamiento"

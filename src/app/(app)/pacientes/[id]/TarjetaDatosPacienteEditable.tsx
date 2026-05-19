@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { cn, edadDesdeFechaNacimiento, formatearFechaCorta, normalizarNombrePersona } from '@/lib/utils'
 import type { ClasificacionAltaPaciente } from '@/types'
+import AseguradoraSelect from '@/components/pacientes/AseguradoraSelect'
 import ListaDesplegableAbajo from '@/components/pacientes/ListaDesplegableAbajo'
 import ModalAlertaRiesgoEntrega from '@/components/pacientes/ModalAlertaRiesgoEntrega'
 import {
@@ -48,6 +49,7 @@ import {
   ZONA_RIESGO_TITULO,
 } from '@/lib/entrega/zona-riesgo-ui'
 import { actualizarDatosPaciente, type PayloadActualizarDatosPaciente } from './actions'
+import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
 export type AccionesVistaFicha = {
   contactado?: React.ReactNode
@@ -137,18 +139,6 @@ function FilaDato({
     </div>
   )
 }
-
-const SEGUROS_MEDICOS = [
-  'INS',
-  'Pan American Life Insurance',
-  'ASSA',
-  'BMI',
-  'MAPFRE',
-  'Mediprocesos',
-  'Koris Insurance',
-  'Best Doctors Insurance',
-  'Adisa',
-]
 
 export type TarjetaDatosPacienteInicial = {
   id: string
@@ -272,6 +262,7 @@ function FormularioEncargadoMenor({
           <input
             className={inputClass}
             value={f.encargadoNombre}
+            maxLength={LIMITES_CAMPOS.nombreEncargado}
             onChange={(e) => setF((s) => ({ ...s, encargadoNombre: e.target.value }))}
             placeholder="Nombre y apellidos"
             autoComplete="off"
@@ -284,6 +275,7 @@ function FormularioEncargadoMenor({
           <input
             className={inputClass}
             value={f.encargadoDocumento}
+            maxLength={LIMITES_CAMPOS.documento}
             onChange={(e) => setF((s) => ({ ...s, encargadoDocumento: e.target.value }))}
             placeholder="Cédula u otro ID"
             autoComplete="off"
@@ -297,6 +289,7 @@ function FormularioEncargadoMenor({
             className={inputClass}
             type="tel"
             value={f.encargadoTelefono}
+            maxLength={LIMITES_CAMPOS.telefono}
             onChange={(e) => setF((s) => ({ ...s, encargadoTelefono: e.target.value }))}
             placeholder="88881234"
             autoComplete="off"
@@ -309,6 +302,7 @@ function FormularioEncargadoMenor({
           <input
             className={inputClass}
             value={f.encargadoParentesco}
+            maxLength={LIMITES_CAMPOS.parentesco}
             onChange={(e) => setF((s) => ({ ...s, encargadoParentesco: e.target.value }))}
             placeholder="Ej: madre, padre, tutor legal"
             autoComplete="off"
@@ -480,12 +474,6 @@ export default function TarjetaDatosPacienteEditable({
   inicialRef.current = inicial
   const inicialKey = serializarInicial(inicial)
 
-  const opcionesSeguro = useMemo(() => {
-    const extra = inicial.seguro_medico?.trim()
-    if (extra && !SEGUROS_MEDICOS.includes(extra)) return [...SEGUROS_MEDICOS, extra]
-    return SEGUROS_MEDICOS
-  }, [inicial.seguro_medico])
-
   useEffect(() => {
     if (editando) return
     setF(fieldsFromInicial(inicialRef.current))
@@ -654,8 +642,6 @@ export default function TarjetaDatosPacienteEditable({
               </div>
             </div>
 
-            <p className="text-xs font-mono text-slate-500">ID {inicial.id.slice(0, 8)}…</p>
-
             {esMenorDeEdad ? (
               <FormularioEncargadoMenor f={f} setF={setF} inputClass={inputClass} />
             ) : null}
@@ -666,6 +652,7 @@ export default function TarjetaDatosPacienteEditable({
                 <input
                   className={inputClass}
                   value={f.nombre}
+                  maxLength={LIMITES_CAMPOS.nombrePersona}
                   onChange={(e) =>
                     setF((s) => ({
                       ...s,
@@ -678,27 +665,21 @@ export default function TarjetaDatosPacienteEditable({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Teléfono / WhatsApp</label>
-                <input className={inputClass} type="tel" value={f.telefono} onChange={(e) => setF((s) => ({ ...s, telefono: e.target.value }))} />
+                <input className={inputClass} type="tel" value={f.telefono} maxLength={LIMITES_CAMPOS.telefono} onChange={(e) => setF((s) => ({ ...s, telefono: e.target.value }))} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Email (opcional)</label>
-                <input className={inputClass} type="email" value={f.email} onChange={(e) => setF((s) => ({ ...s, email: e.target.value }))} />
+                <input className={inputClass} type="email" value={f.email} maxLength={LIMITES_CAMPOS.email} onChange={(e) => setF((s) => ({ ...s, email: e.target.value }))} />
               </div>
               <div className="sm:col-span-2 space-y-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Seguro médico (opcional)</label>
-                  <select
+                  <AseguradoraSelect
                     className={inputClass}
                     value={f.seguro_medico}
-                    onChange={(e) => setF((s) => ({ ...s, seguro_medico: e.target.value }))}
-                  >
-                    <option value="">Seleccionar…</option>
-                    {opcionesSeguro.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                    valorLegacy={inicial.seguro_medico}
+                    onValueChange={(v) => setF((s) => ({ ...s, seguro_medico: v }))}
+                  />
                 </div>
                 <div className="space-y-3">
                   <div>
@@ -708,6 +689,7 @@ export default function TarjetaDatosPacienteEditable({
                     <input
                       className={inputClass}
                       value={f.numero_poliza}
+                      maxLength={LIMITES_CAMPOS.documento}
                       onChange={(e) => setF((s) => ({ ...s, numero_poliza: e.target.value }))}
                       placeholder="Según póliza del seguro"
                       autoComplete="off"
@@ -720,6 +702,7 @@ export default function TarjetaDatosPacienteEditable({
                     <input
                       className={inputClass}
                       value={f.numero_certificado}
+                      maxLength={LIMITES_CAMPOS.documento}
                       onChange={(e) => setF((s) => ({ ...s, numero_certificado: e.target.value }))}
                       placeholder="Según certificado"
                       autoComplete="off"
@@ -728,7 +711,7 @@ export default function TarjetaDatosPacienteEditable({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Empresa (opcional)</label>
-                  <input className={inputClass} value={f.empresa} onChange={(e) => setF((s) => ({ ...s, empresa: e.target.value }))} />
+                  <input className={inputClass} value={f.empresa} maxLength={LIMITES_CAMPOS.empresa} onChange={(e) => setF((s) => ({ ...s, empresa: e.target.value }))} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Tipo de pago</label>
@@ -824,6 +807,7 @@ export default function TarjetaDatosPacienteEditable({
                     <input
                       className={inputClass}
                       value={f.direccionSenas}
+                      maxLength={LIMITES_CAMPOS.direccion}
                       onChange={(e) => setF((s) => ({ ...s, direccionSenas: e.target.value }))}
                       placeholder="Referencias para llegar"
                     />
@@ -835,6 +819,7 @@ export default function TarjetaDatosPacienteEditable({
                   <textarea
                     className={`${inputClass} min-h-[88px]`}
                     value={f.direccionLibre}
+                    maxLength={LIMITES_CAMPOS.direccion}
                     onChange={(e) => setF((s) => ({ ...s, direccionLibre: e.target.value }))}
                     placeholder="Dirección completa"
                   />
@@ -852,6 +837,7 @@ export default function TarjetaDatosPacienteEditable({
                     className={ZONA_RIESGO_TEXTAREA}
                     rows={3}
                     value={f.arregloEntrega}
+                    maxLength={LIMITES_CAMPOS.arregloEntrega}
                     onChange={(e) => setF((s) => ({ ...s, arregloEntrega: e.target.value }))}
                     placeholder="Acuerdo con el cliente (punto de entrega, horario, etc.)"
                   />
@@ -901,10 +887,6 @@ export default function TarjetaDatosPacienteEditable({
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-              <span className="inline-flex items-center gap-1.5">
-                <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-                <span className="font-mono text-xs text-slate-500">{inicial.id.slice(0, 8)}…</span>
-              </span>
               {f.email.trim() ? (
                 <a
                   href={`mailto:${f.email.trim()}`}
