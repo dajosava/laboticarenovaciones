@@ -29,6 +29,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
     medicamento: tratamiento.medicamento,
     marca: tratamiento.marca ?? '',
     concentracion: tratamiento.concentracion ?? '',
+    medico_receta_id: tratamiento.medico_receta_id ?? '',
     dosis_diaria: String(tratamiento.dosis_diaria),
     unidades_caja: String(tratamiento.unidades_caja),
     fecha_surtido: hoy,
@@ -98,6 +99,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
         medicamento: form.medicamento.trim(),
         marca: form.marca.trim() || null,
         concentracion: form.concentracion.trim() || null,
+        medico_receta_id: form.medico_receta_id.trim() || null,
         tipo: form.tipo,
         hubo_regalia: form.hubo_regalia,
         unidades_regalia: form.hubo_regalia ? unidadesRegaliaNum : null,
@@ -147,6 +149,7 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                       medicamento: '',
                       marca: '',
                       concentracion: '',
+                      medico_receta_id: '',
                     }))
                     return
                   }
@@ -180,6 +183,18 @@ export default function FormularioRenovarTratamiento({ pacienteId, tratamiento }
                 onChange={(e) => setForm((f) => ({ ...f, concentracion: e.target.value }))}
                 className={inputClass}
                 placeholder="Ej: 500mg, 20mg"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">ID del medico</label>
+              <input
+                type="text"
+                value={form.medico_receta_id}
+                maxLength={LIMITES_CAMPOS.documento}
+                onChange={(e) => setForm((f) => ({ ...f, medico_receta_id: e.target.value }))}
+                className={inputClass}
+                placeholder="Med-XXXX"
+                autoComplete="off"
               />
             </div>
             <div>

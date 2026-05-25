@@ -251,6 +251,7 @@ export type DatosRenovacion = {
   medicamento?: string
   marca?: string | null
   concentracion?: string | null
+  medico_receta_id?: string | null
   tipo?: 'cronico' | 'temporal'
   /** Unidades extra por regalía/promo; se suman solo para calcular la nueva fecha de vencimiento. */
   hubo_regalia?: boolean
@@ -320,6 +321,7 @@ export async function registrarRenovacion(
   if (datos.medicamento !== undefined) updatePayload.medicamento = datos.medicamento.trim()
   if (datos.marca !== undefined) updatePayload.marca = datos.marca?.trim() || null
   if (datos.concentracion !== undefined) updatePayload.concentracion = datos.concentracion?.trim() || null
+  if (datos.medico_receta_id !== undefined) updatePayload.medico_receta_id = datos.medico_receta_id?.trim() || null
   if (datos.tipo !== undefined) updatePayload.tipo = datos.tipo
 
   const huboRegalia = extraRegalia > 0

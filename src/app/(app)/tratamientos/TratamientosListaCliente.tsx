@@ -10,7 +10,8 @@ import {
   formatoMedicamento,
   formatearFechaCorta,
 } from '@/lib/utils'
-import { CheckCircle2, Eye, Pill, Search } from 'lucide-react'
+import { Eye, Pill, Repeat, Search } from 'lucide-react'
+import { PANEL_ACCION_ESTILOS, PANEL_ACCION_LABEL } from '@/app/(app)/dashboard/panel-renovaciones-ui'
 
 export type TratamientoListaItem = {
   id: string
@@ -243,7 +244,7 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
                 <th className="whitespace-nowrap px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Días
                 </th>
-                <th className="whitespace-nowrap px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th className="whitespace-nowrap px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Acciones
                 </th>
               </tr>
@@ -319,31 +320,38 @@ export default function TratamientosListaCliente({ items }: { items: Tratamiento
                                 {dias < 0 ? `${dias}` : `${dias}d`}
                               </span>
                             </td>
-                            <td className="px-3 py-2 align-middle">
-                              <div className="flex flex-wrap items-center justify-end gap-1.5 opacity-100 transition-opacity md:opacity-70 md:group-hover:opacity-100">
-                                <Link
-                                  href={hrefRenovar}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-500/35 bg-brand-500/10 text-brand-700 transition hover:bg-brand-500/20 dark:text-brand-300"
-                                  title="Registrar renovación"
-                                >
-                                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                                </Link>
-                                <Link
-                                  href={hrefPaciente}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                                  title="Ver paciente"
-                                >
-                                  <Eye className="h-4 w-4" aria-hidden />
-                                </Link>
-                              </div>
-                              <div className="mt-1 hidden text-right text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:block">
-                                <Link href={hrefRenovar} className="text-brand-600 hover:underline dark:text-brand-400">
-                                  Renovar
-                                </Link>
-                                {' · '}
-                                <Link href={hrefPaciente} className="hover:underline">
-                                  Ficha
-                                </Link>
+                            <td className="px-3 py-2 align-middle text-center">
+                              <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-4 sm:gap-5">
+                                <div className="flex w-8 flex-col items-center gap-1.5 sm:w-auto sm:min-w-[3.25rem]">
+                                  <Link
+                                    href={hrefRenovar}
+                                    className={PANEL_ACCION_ESTILOS.renovar}
+                                    title="Registrar renovación"
+                                  >
+                                    <Repeat className="h-4 w-4" aria-hidden />
+                                  </Link>
+                                  <Link
+                                    href={hrefRenovar}
+                                    className={cn(PANEL_ACCION_LABEL.base, PANEL_ACCION_LABEL.renovar)}
+                                  >
+                                    Renovar
+                                  </Link>
+                                </div>
+                                <div className="flex w-8 flex-col items-center gap-1.5 sm:w-auto sm:min-w-[2.5rem]">
+                                  <Link
+                                    href={hrefPaciente}
+                                    className={PANEL_ACCION_ESTILOS.ficha}
+                                    title="Ver ficha del paciente"
+                                  >
+                                    <Eye className="h-4 w-4" aria-hidden />
+                                  </Link>
+                                  <Link
+                                    href={hrefPaciente}
+                                    className={cn(PANEL_ACCION_LABEL.base, PANEL_ACCION_LABEL.ficha)}
+                                  >
+                                    Ficha
+                                  </Link>
+                                </div>
                               </div>
                             </td>
                           </tr>

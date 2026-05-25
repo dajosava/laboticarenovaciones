@@ -831,7 +831,7 @@ export default function NuevoPacientePage() {
                       value={trat.medico_receta_id}
                       maxLength={LIMITES_CAMPOS.documento}
                       autoComplete="off"
-                      placeholder="Ej: código profesional o ID interno"
+                      placeholder="Med-XXXX"
                       onChange={(e) => setTratField(idx, 'medico_receta_id', e.target.value)}
                     />
                   </Field>
