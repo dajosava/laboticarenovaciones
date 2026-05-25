@@ -264,11 +264,9 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                                 ({formatearFechaCorta(t.fecha_vencimiento)})
                               </span>
                             </CeldaMetrica>
-                            {t.medico_receta_id?.trim() ? (
-                              <CeldaMetrica icon={Stethoscope} label="ID del médico" mono className="sm:col-span-2 md:col-span-3">
-                                {t.medico_receta_id.trim()}
-                              </CeldaMetrica>
-                            ) : null}
+                            <CeldaMetrica icon={Stethoscope} label="ID del médico" mono className="sm:col-span-2 md:col-span-3">
+                              {t.medico_receta_id?.trim() || 'No registrado'}
+                            </CeldaMetrica>
                           </div>
 
                           <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
@@ -281,29 +279,19 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
 
                           <BarraProgresoTratamiento dias={dias} />
 
-                          <div className="mt-4 space-y-2">
-                            <div className="flex flex-wrap gap-2">
-                              <Link
-                                href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                              >
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                                Registrar renovación
-                              </Link>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <a
-                                href="#historial-renovaciones"
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                              >
-                                Ver historial
-                              </a>
-                              <BotonContactadoRenovacion
-                                tratamientoId={t.id}
-                                contactado={!!t.contactado_renovacion_en}
-                                variant="ficha"
-                              />
-                            </div>
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/pacientes/${id}/tratamiento/${t.id}/renovar`}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                            >
+                              <CheckCircle2 className="h-4 w-4" aria-hidden />
+                              Registrar renovación
+                            </Link>
+                            <BotonContactadoRenovacion
+                              tratamientoId={t.id}
+                              contactado={!!t.contactado_renovacion_en}
+                              variant="ficha"
+                            />
                           </div>
                         </article>
                       )
@@ -316,7 +304,11 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
 
           <section id="historial-renovaciones" className={clasesSeccionFicha}>
             <details className="group">
-              <EncabezadoSeccionColapsable icon={Clock} titulo="Historial de renovaciones" />
+              <EncabezadoSeccionColapsable
+                icon={Clock}
+                titulo="Ver historial de renovaciones"
+                tituloClassName="text-black dark:text-white"
+              />
               <div className="mt-4">
                 {renovaciones.length === 0 ? (
                   <PieSeccionFicha className="mt-0 border-amber-100 bg-amber-50/80 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
@@ -326,6 +318,7 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                   <ol className="relative ms-2 border-l border-slate-200 ps-6 dark:border-slate-700">
                     {renovaciones.map((r: Renovacion) => {
                       const t = tratById.get(r.tratamiento_id)
+                      const medicoRecetaId = t?.medico_receta_id?.trim()
                       const diasDiff = t ? differenceInDays(parseISO(r.fecha), parseISO(t.fecha_vencimiento)) : 0
                       const tardia = diasDiff > 0
                       return (
@@ -354,6 +347,10 @@ export default async function FichaPacientePage({ params }: { params: Promise<{ 
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             {r.farmacia?.nombre ?? 'Sucursal'} · {r.empleado?.nombre ?? '—'}
                             {t ? ` · ${formatoMedicamento(t)}` : ''}
+                          </p>
+                          <p className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                            ID del médico:{' '}
+                            <span className="font-mono">{medicoRecetaId || 'No registrado'}</span>
                           </p>
                           {r.hubo_regalia && r.unidades_regalia ? (
                             <p className="mt-1 text-xs font-medium text-brand-700 dark:text-brand-400">

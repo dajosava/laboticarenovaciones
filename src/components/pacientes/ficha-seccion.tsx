@@ -69,15 +69,17 @@ export function PieSeccionFicha({ children, className }: { children: React.React
 export function EncabezadoSeccionColapsable({
   icon: Icon,
   titulo,
+  tituloClassName,
 }: {
   icon: LucideIcon
   titulo: string
+  tituloClassName?: string
 }) {
   return (
     <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40">
       <span className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden />
-        <h2 className={clasesTituloSeccionFicha}>{titulo}</h2>
+        <h2 className={cn(clasesTituloSeccionFicha, tituloClassName)}>{titulo}</h2>
       </span>
       <ChevronDown
         className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180 dark:text-slate-500"

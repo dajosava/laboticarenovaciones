@@ -13,7 +13,8 @@ import { CalendarDays, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { differenceInDays, format, parseISO, startOfWeek, subDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import DashboardRenovacionesClient, { type DashboardRow } from './DashboardRenovacionesClient'
-import { PANEL_KPI_CHIP, PANEL_LINK_PACIENTES, PANEL_VISTA_SEGMENT, PANEL_VISTA_WRAP } from './panel-renovaciones-ui'
+import DashboardVistaFiltros from './DashboardVistaFiltros'
+import { PANEL_KPI_CHIP, PANEL_LINK_PACIENTES } from './panel-renovaciones-ui'
 
 type FiltroVer = 'pendientes' | 'contactados' | 'todos'
 type FiltroNivel = 'vencidos' | 'critico' | 'urgente' | 'planificacion'
@@ -553,35 +554,12 @@ export default async function DashboardPage({
               </div>
             )}
             <span className="text-xs text-slate-500">Vista:</span>
-            <div className={PANEL_VISTA_WRAP}>
-              <Link
-                href={buildUrlFiltros('pendientes', activeFiltrosNivel)}
-                className={cn(
-                  PANEL_VISTA_SEGMENT.base,
-                  ver === 'pendientes' ? PANEL_VISTA_SEGMENT.pendientesActive : PANEL_VISTA_SEGMENT.pendientesInactive,
-                )}
-              >
-                No contactados
-              </Link>
-              <Link
-                href={buildUrlFiltros('contactados', activeFiltrosNivel)}
-                className={cn(
-                  PANEL_VISTA_SEGMENT.base,
-                  ver === 'contactados' ? PANEL_VISTA_SEGMENT.contactadosActive : PANEL_VISTA_SEGMENT.contactadosInactive,
-                )}
-              >
-                Contactados
-              </Link>
-              <Link
-                href={buildUrlFiltros('todos', activeFiltrosNivel)}
-                className={cn(
-                  PANEL_VISTA_SEGMENT.base,
-                  ver === 'todos' ? PANEL_VISTA_SEGMENT.todosActive : PANEL_VISTA_SEGMENT.todosInactive,
-                )}
-              >
-                Todos
-              </Link>
-            </div>
+            <DashboardVistaFiltros
+              ver={ver}
+              pendientesHref={buildUrlFiltros('pendientes', activeFiltrosNivel)}
+              contactadosHref={buildUrlFiltros('contactados', activeFiltrosNivel)}
+              todosHref={buildUrlFiltros('todos', activeFiltrosNivel)}
+            />
             <Link href="/pacientes" className={PANEL_LINK_PACIENTES}>
               Pacientes →
             </Link>
