@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
-const { getSecurityHeaders } = require('./security-headers')
+const { getStaticSecurityHeaders } = require('./security-headers')
 
-const securityHeaders = getSecurityHeaders()
+const staticSecurityHeaders = getStaticSecurityHeaders()
 
 const nextConfig = {
   experimental: {
@@ -11,7 +11,7 @@ const nextConfig = {
     return [
       {
         source: '/:path*',
-        headers: securityHeaders,
+        headers: staticSecurityHeaders,
       },
     ]
   },

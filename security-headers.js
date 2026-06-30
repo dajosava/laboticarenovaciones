@@ -1,5 +1,12 @@
 /** @typedef {{ key: string; value: string }} SecurityHeader */
 
+const NONCE_HEADER = 'x-nonce'
+
+/** @returns {string} */
+function generateNonce() {
+  return Buffer.from(crypto.randomUUID()).toString('base64')
+}
+
 /** @returns {string} */
 function buildConnectSrc() {
   /** @type {Set<string>} */
@@ -18,12 +25,24 @@ function buildConnectSrc() {
   return [...sources].join(' ')
 }
 
-/** @returns {string} */
-function buildContentSecurityPolicy() {
+/**
+ * CSP estricta con nonce (sin 'unsafe-inline' en script-src).
+ * @param {string} nonce
+ * @returns {string}
+ */
+function buildContentSecurityPolicy(nonce) {
+  const isDev = process.env.NODE_ENV === 'development'
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    ...(isDev ? ["'unsafe-eval'"] : []),
+  ].join(' ')
+
   /** @type {string[]} */
   const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     `connect-src ${buildConnectSrc()}`,
     "img-src 'self' data: blob:",
@@ -42,10 +61,9 @@ function buildContentSecurityPolicy() {
   return directives.join('; ')
 }
 
-/** @returns {SecurityHeader[]} */
-function getSecurityHeaders() {
+/** Encabezados sin CSP (para next.config / Netlify; la CSP va solo en middleware). */
+function getStaticSecurityHeaders() {
   return [
-    { key: 'Content-Security-Policy', value: buildContentSecurityPolicy() },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'X-Frame-Options', value: 'DENY' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -54,9 +72,26 @@ function getSecurityHeaders() {
   ]
 }
 
-/** @param {import('next/server').NextResponse} response */
-function applySecurityHeaders(response) {
-  for (const { key, value } of getSecurityHeaders()) {
+/**
+ * @param {string} nonce
+ * @returns {SecurityHeader[]}
+ */
+function getSecurityHeaders(nonce) {
+  return [
+    { key: 'Content-Security-Policy', value: buildContentSecurityPolicy(nonce) },
+    ...getStaticSecurityHeaders(),
+  ]
+}
+
+/**
+ * @param {import('next/server').NextResponse} response
+ * @param {{ nonce?: string }} [options]
+ */
+function applySecurityHeaders(response, options = {}) {
+  const { nonce } = options
+  const headers = nonce ? getSecurityHeaders(nonce) : getStaticSecurityHeaders()
+
+  for (const { key, value } of headers) {
     response.headers.set(key, value)
   }
   return response
@@ -71,9 +106,20 @@ const REQUIRED_RESPONSE_HEADERS = [
   'cross-origin-resource-policy',
 ]
 
+/** Patrones que Observatory penaliza en script-src (solo producción) */
+const CSP_SCRIPT_WEAK_PATTERNS = [
+  /script-src[^;]*'unsafe-inline'/,
+  /script-src[^;]*'unsafe-eval'/,
+  /script-src[^;]*\bdata:/,
+]
+
 module.exports = {
+  CSP_SCRIPT_WEAK_PATTERNS,
+  NONCE_HEADER,
   REQUIRED_RESPONSE_HEADERS,
   applySecurityHeaders,
   buildContentSecurityPolicy,
+  generateNonce,
   getSecurityHeaders,
+  getStaticSecurityHeaders,
 }

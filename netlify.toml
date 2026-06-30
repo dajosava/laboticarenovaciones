@@ -9,12 +9,11 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Encabezados de seguridad en TODAS las rutas (login, dashboard, admin, API, etc.).
-# Mantener alineado con security-headers.js
+# Encabezados estáticos (sin CSP: la CSP con nonce se genera en middleware).
+# Mantener alineado con getStaticSecurityHeaders() en security-headers.js
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"

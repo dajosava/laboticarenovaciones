@@ -6,7 +6,10 @@
  *   HEADERS_BASE_URL=https://laboticarenovaciones.netlify.app node scripts/verify-security-headers.mjs
  */
 
-import { REQUIRED_RESPONSE_HEADERS } from '../security-headers.js'
+import {
+  CSP_SCRIPT_WEAK_PATTERNS,
+  REQUIRED_RESPONSE_HEADERS,
+} from '../security-headers.js'
 
 const BASE_URL = (process.env.HEADERS_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
 
@@ -28,16 +31,39 @@ const ROUTES = [
   '/api/env-check',
 ]
 
+function validateCsp(csp) {
+  if (!csp) return ['content-security-policy ausente']
+  const issues = []
+  const isLocalhost = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1')
+
+  for (const pattern of CSP_SCRIPT_WEAK_PATTERNS) {
+    if (pattern.test(csp)) {
+      if (isLocalhost && pattern.source.includes('unsafe-eval')) continue
+      issues.push(`script-src débil: ${pattern}`)
+    }
+  }
+  if (!/script-src[^;]*'strict-dynamic'/.test(csp)) {
+    issues.push("script-src sin 'strict-dynamic'")
+  }
+  if (!/script-src[^;]*'nonce-/.test(csp)) {
+    issues.push("script-src sin nonce")
+  }
+  return issues
+}
+
 async function checkRoute(path) {
   const url = `${BASE_URL}${path}`
   const response = await fetch(url, { redirect: 'manual' })
   const missing = REQUIRED_RESPONSE_HEADERS.filter((name) => !response.headers.get(name))
+  const csp = response.headers.get('content-security-policy') ?? ''
+  const cspIssues = validateCsp(csp)
 
   return {
     path,
     status: response.status,
-    ok: missing.length === 0,
+    ok: missing.length === 0 && cspIssues.length === 0,
     missing,
+    cspIssues,
   }
 }
 
@@ -52,17 +78,22 @@ async function main() {
     console.log(`[${icon}] ${result.path} (HTTP ${result.status})`)
     if (!result.ok) {
       failed += 1
-      console.log(`      Sin: ${result.missing.join(', ')}`)
+      if (result.missing.length) {
+        console.log(`      Sin: ${result.missing.join(', ')}`)
+      }
+      if (result.cspIssues.length) {
+        console.log(`      CSP: ${result.cspIssues.join('; ')}`)
+      }
     }
   }
 
   console.log('')
   if (failed === 0) {
-    console.log(`Todas las rutas (${results.length}) incluyen los encabezados requeridos.`)
+    console.log(`Todas las rutas (${results.length}) incluyen encabezados estrictos con nonce.`)
     process.exit(0)
   }
 
-  console.error(`${failed} ruta(s) sin encabezados completos.`)
+  console.error(`${failed} ruta(s) con encabezados incompletos o CSP débil.`)
   process.exit(1)
 }
 
