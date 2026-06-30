@@ -3,8 +3,6 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { AuthError } from '@supabase/supabase-js'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import {
   ArrowRight,
   CheckCircle2,
@@ -14,7 +12,6 @@ import {
   Moon,
   Phone,
   Shield,
-  Sparkles,
   Stethoscope,
   Sun,
   X,
@@ -25,7 +22,6 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { LIMITES_CAMPOS } from '@/lib/limites-campos'
 
-const LAST_LOGIN_KEY = 'farmarenovar-last-login-at'
 const REMEMBER_KEY = 'farmarenovar-remember-session'
 
 const SOPORTE_DESARROLLADOR = {
@@ -124,21 +120,7 @@ function LoginPageContent() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [showForgot, setShowForgot] = useState(false)
   const [resetSending, setResetSending] = useState(false)
-  const [lastLoginLabel, setLastLoginLabel] = useState<string | null>(null)
   const [modalSoporteAbierto, setModalSoporteAbierto] = useState(false)
-
-  useEffect(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem(LAST_LOGIN_KEY) : null
-    if (!raw) return
-    try {
-      const d = new Date(raw)
-      if (!Number.isNaN(d.getTime())) {
-        setLastLoginLabel(format(d, "d MMM yyyy · HH:mm", { locale: es }))
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   useEffect(() => {
     const remembered = typeof window !== 'undefined' ? localStorage.getItem(REMEMBER_KEY) : null
@@ -179,7 +161,6 @@ function LoginPageContent() {
 
     try {
       localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0')
-      localStorage.setItem(LAST_LOGIN_KEY, new Date().toISOString())
     } catch {
       /* ignore */
     }
@@ -279,12 +260,6 @@ function LoginPageContent() {
             <div className="mx-auto w-full max-w-md">
               <div className="mb-8 lg:mb-10">
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Iniciar sesión</h2>
-                {lastLoginLabel ? (
-                  <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                    <Sparkles className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" aria-hidden />
-                    Último acceso: {lastLoginLabel}
-                  </p>
-                ) : null}
               </div>
 
               <form onSubmit={handleLogin} className="space-y-5">
