@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
-  NONCE_HEADER,
+  applyRequestCspHeaders,
   applySecurityHeaders,
   generateNonce,
 } from '../security-headers.js'
@@ -9,7 +9,7 @@ import {
 function createSecureContext(request: NextRequest) {
   const nonce = generateNonce()
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set(NONCE_HEADER, nonce)
+  applyRequestCspHeaders(requestHeaders, nonce)
 
   function secureResponse(response: NextResponse) {
     return applySecurityHeaders(response, { nonce })
@@ -78,5 +78,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    {
+      source: '/((?!_next/static|_next/image|favicon.ico).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
+  ],
 }

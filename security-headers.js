@@ -84,6 +84,16 @@ function getSecurityHeaders(nonce) {
 }
 
 /**
+ * Headers de request que Next.js necesita para inyectar el nonce en scripts durante SSR.
+ * @param {Headers} requestHeaders
+ * @param {string} nonce
+ */
+function applyRequestCspHeaders(requestHeaders, nonce) {
+  requestHeaders.set(NONCE_HEADER, nonce)
+  requestHeaders.set('Content-Security-Policy', buildContentSecurityPolicy(nonce))
+}
+
+/**
  * @param {import('next/server').NextResponse} response
  * @param {{ nonce?: string }} [options]
  */
@@ -94,6 +104,11 @@ function applySecurityHeaders(response, options = {}) {
   for (const { key, value } of headers) {
     response.headers.set(key, value)
   }
+
+  if (nonce) {
+    response.headers.set('Cache-Control', 'private, no-store, must-revalidate')
+  }
+
   return response
 }
 
@@ -117,6 +132,7 @@ module.exports = {
   CSP_SCRIPT_WEAK_PATTERNS,
   NONCE_HEADER,
   REQUIRED_RESPONSE_HEADERS,
+  applyRequestCspHeaders,
   applySecurityHeaders,
   buildContentSecurityPolicy,
   generateNonce,
